@@ -5,8 +5,10 @@
 #*************************************************************************************
 #  -*- coding: utf-8 -*-
 from ftplib import FTP
+from decouple import config
+
 ftp = FTP()
-ftp.connect('xx.xx.xxx.xx or Host_name' , 21, -999) 
-ftp.login('USER_PROFILE', 'PASSWORD')
-print('Welcome to  =>' , ftp.getwelcome())
+ftp.connect(config('Host', default='PUB400.COM'), 21, -999)
+ftp.login(config('user'), config('password'))
+print('Welcome to  =>', ftp.getwelcome())
 ftp.close()
