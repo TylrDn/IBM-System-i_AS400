@@ -27,6 +27,12 @@ This repository contains scripts and examples for transferring payroll data from
   password=PASSWORD
   ```
 
+### Using the public PUB400 IBM i server
+If you do not have access to an IBM i, you can create a free account at
+[pub400.com](https://pub400.com). After registering, copy `.env.example` to
+`.env` and update the `user` and `password` values with your PUB400
+credentials. The `Host` value should remain `PUB400.COM`.
+
 ## Usage
 1. Place `Data_EO.xls` in the project directory. The script will generate `Data_EO.csv`.
 2. Run the GUI:
