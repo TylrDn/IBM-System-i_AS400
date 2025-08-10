@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
 import subprocess
 import time
 from tkinter import Tk, RIGHT, LEFT, HORIZONTAL, StringVar
@@ -27,10 +28,13 @@ def button_confirm():
         payroll_b_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), '../payroll_b.py')
         )
-        completed_process = subprocess.run(['python', payroll_b_path])
+        completed_process = subprocess.run(
+            [sys.executable, payroll_b_path], check=True
+        )
         print(completed_process)
-    except:
-        print("An error has occurred in payroll_b")
+    except subprocess.CalledProcessError as exc:
+        print(f"An error has occurred in payroll_b: {exc}")
+        raise
     else:
         print("Successful execution of payroll_b")
 

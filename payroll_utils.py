@@ -8,6 +8,7 @@ import csv
 import logging
 import os
 import subprocess
+import sys
 from ftplib import FTP, all_errors
 
 import xlrd
@@ -29,9 +30,11 @@ def csv_from_excel(
     Parameters
     ----------
     xls_file: str, optional
-        Source Excel file name. Defaults to ``Data_EO.xls``.
+        Source Excel file name. Defaults to the ``XLS_FILE`` environment
+        variable or ``Data_EO.xls`` if not set.
     csv_file: str, optional
-        Destination CSV file name. Defaults to ``Data_EO.csv``.
+        Destination CSV file name. Defaults to the ``CSV_FILE`` environment
+        variable or ``Data_EO.csv`` if not set.
     """
 
     xls_file = xls_file or config("XLS_FILE", default="Data_EO.xls")
@@ -71,7 +74,21 @@ def csv_from_excel(
 
 
 def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
-    """Upload the generated CSV to the IBM i server and run post-processing."""
+    """Upload the generated CSV to the IBM i server and run post-processing.
+
+    Parameters
+    ----------
+    file_transfer_name: str, optional
+        Path of the CSV to transfer. Defaults to the ``CSV_FILE`` environment
+        variable or ``Data_EO.csv`` if not set.
+
+    Raises
+    ------
+    ftplib.all_errors
+        If any FTP error occurs.
+    subprocess.CalledProcessError
+        If any of the invoked subprocesses fail.
+    """
 
     ftp = FTP()
     logger.info("")
@@ -100,7 +117,7 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
         subprocess.run(["ftp_cl_as400.bat"], check=True)
 
         # Successfully completed process
-        subprocess.run(["python", "payroll_process_done.py"], check=True)
+        subprocess.run([sys.executable, "payroll_process_done.py"], check=True)
 
     except all_errors as err:
         logger.error(
