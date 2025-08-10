@@ -114,10 +114,13 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
         ftp.quit()
 
         # Call the interface to connect to IBM i via FTP and invoke update programs
-        subprocess.run(["ftp_cl_as400.bat"], check=True)
+        subprocess.run(["ftp_cl_as400.bat"], check=True, shell=False)
 
         # Successfully completed process
-        subprocess.run([sys.executable, "payroll_process_done.py"], check=True)
+        done_script = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "payroll_process_done.py")
+        )
+        subprocess.run([sys.executable, done_script], check=True, shell=False)
 
     except all_errors as err:
         logger.error(
