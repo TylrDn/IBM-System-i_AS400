@@ -16,11 +16,39 @@ import xlrd
 import xlrd.biffh
 from decouple import config
 from colorama import Fore
-from typing import Optional
+from typing import Optional, Sequence
 
 logger = logging.getLogger(__name__)
 
 FTP_TIMEOUT = None
+
+
+def require_file(path: Path, description: str) -> Path:
+    """Ensure that *path* exists and return it.
+
+    Parameters
+    ----------
+    path: :class:`pathlib.Path`
+        File path to validate.
+    description: str
+        Human readable description for error messages.
+
+    Raises
+    ------
+    FileNotFoundError
+        If *path* does not exist.
+    """
+
+    if not path.is_file():
+        logger.error(Fore.RED + f"{description} not found: {path}")
+        raise FileNotFoundError(path)
+    return path
+
+
+def run_subprocess(command: Sequence[str]) -> None:
+    """Run *command* using :func:`subprocess.run` with standard settings."""
+
+    subprocess.run(list(map(str, command)), check=True, shell=False)
 
 
 def csv_from_excel(
@@ -106,12 +134,10 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
 
         ftp.cwd("/tmp")
 
-        file_transfer_name = Path(
-            file_transfer_name or config("CSV_FILE", default="Data_EO.csv")
-        ).resolve()
-        if not file_transfer_name.is_file():
-            logger.error(Fore.RED + f"CSV file not found: {file_transfer_name}")
-            raise FileNotFoundError(file_transfer_name)
+        file_transfer_name = require_file(
+            Path(file_transfer_name or config("CSV_FILE", default="Data_EO.csv")).resolve(),
+            "CSV file",
+        )
 
         # Transfer CSV file to the IBM i IFS folder
         csv_name = file_transfer_name.name
@@ -123,20 +149,22 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
 
         # Call the interface to connect to IBM i via FTP and invoke update programs
         if os.name == "nt":
-            bat_script = Path(__file__).with_name("ftp_cl_as400.bat")
-            if not bat_script.is_file():
-                logger.error(Fore.RED + f"Batch file not found: {bat_script}")
-                raise FileNotFoundError(bat_script)
-            subprocess.run(["cmd", "/c", str(bat_script)], check=True, shell=False)
+            bat_script = require_file(
+                Path(__file__).with_name("ftp_cl_as400.bat"),
+                "Batch file",
+            )
+            run_subprocess(["cmd", "/c", str(bat_script)])
         else:
-            logger.info("Skipping Windows batch script on non-Windows platform")
+            logger.warning(
+                "Skipping Windows batch script; FTP trigger will not run on this platform"
+            )
 
         # Successfully completed process
-        done_script = Path(__file__).resolve().with_name("payroll_process_done.py")
-        if not done_script.is_file():
-            logger.error(Fore.RED + f"Completion script not found: {done_script}")
-            raise FileNotFoundError(done_script)
-        subprocess.run([sys.executable, str(done_script)], check=True, shell=False)
+        done_script = require_file(
+            Path(__file__).resolve().with_name("payroll_process_done.py"),
+            "Completion script",
+        )
+        run_subprocess([sys.executable, str(done_script)])
 
     except all_errors as err:
         logger.error(
