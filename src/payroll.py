@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import subprocess
 import time
 from tkinter import Tk, RIGHT, LEFT, HORIZONTAL, StringVar
@@ -23,7 +24,10 @@ def button_confirm():
                 str(int((x / task) * 100)) + "% Iniciando Interfaz. Por Favor, Espere Hasta Que El Proceso Termine.")
             WindowFrame.update_idletasks()
 
-        completed_process = subprocess.run('python ../payroll_b.py')
+        payroll_b_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '../payroll_b.py')
+        )
+        completed_process = subprocess.run(['python', payroll_b_path])
         print(completed_process)
     except:
         print("An error has occurred in payroll_b")
