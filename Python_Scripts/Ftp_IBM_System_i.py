@@ -4,11 +4,21 @@
 #                                                                                               
 #*************************************************************************************
 #  -*- coding: utf-8 -*-
-from ftplib import FTP
-from decouple import config
+from ftplib import FTP, error_perm
+from decouple import config, UndefinedValueError
 
 ftp = FTP()
-ftp.connect(config('Host', default='PUB400.COM'), 21, -999)
-ftp.login(config('user'), config('password'))
-print('Welcome to  =>', ftp.getwelcome())
-ftp.close()
+try:
+    user = config('user')
+    password = config('password')
+except UndefinedValueError as exc:
+    print('Missing credentials:', exc)
+else:
+    ftp.connect(config('Host', default='PUB400.COM'), 21, -999)
+    try:
+        ftp.login(user, password)
+        print('Welcome to  =>', ftp.getwelcome())
+    except error_perm as exc:
+        print('FTP login failed:', exc)
+    finally:
+        ftp.close()
