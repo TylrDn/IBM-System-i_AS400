@@ -1,6 +1,6 @@
 # IBM System i / AS400 Payroll Interface
 
-This repository contains scripts and examples for transferring payroll data from a local Excel spreadsheet to an IBM i (AS/400) server. The main workflow converts an `.xls` template to CSV, uploads it to the IBM i integrated file system and triggers server-side programs to apply salary adjustments. Sample Python and Java snippets for connecting to IBM i are also included.
+This repository contains scripts and examples for transferring payroll data from a local system Excel spreadsheet to an IBM i (AS/400) server. The main workflow converts an `.xls` template to CSV, uploads it to the IBM i integrated file system and triggers server-side programs to apply salary adjustments. Sample Python and Java snippets for connecting to IBM i are also included.
 
 ## Directory layout
 - `payroll.py` – Tkinter GUI entrypoint. Displays a confirmation window and, on approval, runs `payroll_b.py`.

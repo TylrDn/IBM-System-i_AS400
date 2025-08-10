@@ -106,7 +106,12 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
 
         ftp.cwd("/tmp")
 
-        file_transfer_name = Path(file_transfer_name or config("CSV_FILE", default="Data_EO.csv")).resolve()
+        file_transfer_name = Path(
+            file_transfer_name or config("CSV_FILE", default="Data_EO.csv")
+        ).resolve()
+        if not file_transfer_name.is_file():
+            logger.error(Fore.RED + f"CSV file not found: {file_transfer_name}")
+            raise FileNotFoundError(file_transfer_name)
 
         # Transfer CSV file to the IBM i IFS folder
         csv_name = file_transfer_name.name
@@ -117,12 +122,14 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
         ftp.quit()
 
         # Call the interface to connect to IBM i via FTP and invoke update programs
-        bat_script = Path("ftp_cl_as400.bat").resolve()
-        if not bat_script.is_file():
-            logger.error(Fore.RED + f"Batch file not found: {bat_script}")
-            raise FileNotFoundError(bat_script)
-        cmd = ["cmd", "/c", str(bat_script)] if os.name == "nt" else [str(bat_script)]
-        subprocess.run(cmd, check=True, shell=False)
+        if os.name == "nt":
+            bat_script = Path(__file__).with_name("ftp_cl_as400.bat")
+            if not bat_script.is_file():
+                logger.error(Fore.RED + f"Batch file not found: {bat_script}")
+                raise FileNotFoundError(bat_script)
+            subprocess.run(["cmd", "/c", str(bat_script)], check=True, shell=False)
+        else:
+            logger.info("Skipping Windows batch script on non-Windows platform")
 
         # Successfully completed process
         done_script = Path(__file__).resolve().with_name("payroll_process_done.py")
