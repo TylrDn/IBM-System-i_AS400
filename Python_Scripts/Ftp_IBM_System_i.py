@@ -15,7 +15,7 @@ try:
     password = config('password')
     try:
         ftp.connect(config('Host', default='PUB400.COM'), 21, timeout=FTP_TIMEOUT)
-    except (OSError, all_errors) as exc:
+    except all_errors as exc:
         print('FTP connection failed:', exc)
     else:
         try:
