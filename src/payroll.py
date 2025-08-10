@@ -25,7 +25,9 @@ def button_confirm():
                 str(int((x / task) * 100)) + "% Iniciando Interfaz. Por Favor, Espere Hasta Que El Proceso Termine.")
             WindowFrame.update_idletasks()
 
-        payroll_b_path = Path(__file__).resolve().parent.parent / "payroll_b.py"
+        payroll_b_path = (Path(__file__).resolve().parent.parent / "payroll_b.py").resolve()
+        if not payroll_b_path.is_file():
+            raise FileNotFoundError(f"Missing payroll_b script: {payroll_b_path}")
         completed_process = subprocess.run(
             [sys.executable, str(payroll_b_path)], check=True, shell=False
         )
