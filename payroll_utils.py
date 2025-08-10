@@ -9,6 +9,7 @@ import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
 from ftplib import FTP, all_errors
 
 import xlrd
@@ -88,6 +89,8 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
         If any FTP error occurs.
     subprocess.CalledProcessError
         If any of the invoked subprocesses fail.
+    FileNotFoundError
+        If required script files are missing.
     """
 
     ftp = FTP()
@@ -103,24 +106,30 @@ def ftp_upload(file_transfer_name: Optional[str] = None) -> None:
 
         ftp.cwd("/tmp")
 
-        file_transfer_name = file_transfer_name or config("CSV_FILE", default="Data_EO.csv")
+        file_transfer_name = Path(file_transfer_name or config("CSV_FILE", default="Data_EO.csv")).resolve()
 
         # Transfer CSV file to the IBM i IFS folder
-        csv_name = os.path.basename(file_transfer_name)
-        with open(file_transfer_name, "rb") as csv_file:
+        csv_name = file_transfer_name.name
+        with file_transfer_name.open("rb") as csv_file:
             ftp.storlines(f"STOR {csv_name}", csv_file)
             logger.info(f"Transferred {file_transfer_name}")
 
         ftp.quit()
 
         # Call the interface to connect to IBM i via FTP and invoke update programs
-        subprocess.run(["ftp_cl_as400.bat"], check=True, shell=False)
+        bat_script = Path("ftp_cl_as400.bat").resolve()
+        if not bat_script.is_file():
+            logger.error(Fore.RED + f"Batch file not found: {bat_script}")
+            raise FileNotFoundError(bat_script)
+        cmd = ["cmd", "/c", str(bat_script)] if os.name == "nt" else [str(bat_script)]
+        subprocess.run(cmd, check=True, shell=False)
 
         # Successfully completed process
-        done_script = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "payroll_process_done.py")
-        )
-        subprocess.run([sys.executable, done_script], check=True, shell=False)
+        done_script = Path(__file__).resolve().with_name("payroll_process_done.py")
+        if not done_script.is_file():
+            logger.error(Fore.RED + f"Completion script not found: {done_script}")
+            raise FileNotFoundError(done_script)
+        subprocess.run([sys.executable, str(done_script)], check=True, shell=False)
 
     except all_errors as err:
         logger.error(
