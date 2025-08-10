@@ -11,7 +11,6 @@ import subprocess
 from ftplib import FTP, all_errors
 import xlrd
 from decouple import config
-import time
 from colorama import init, Fore
 
 # start colorama
@@ -27,9 +26,10 @@ def csv_from_excel():
         wb = xlrd.open_workbook('Data_EO.xls')
         sh = wb.sheet_by_index(0)
     except FileNotFoundError:
-        print(Fore.RED + "Opening the Data_EO.xls file failed, Please make sure that the file exists in the folder.")
-        waiting_time = 13
-        time.sleep(waiting_time)
+        print(
+            Fore.RED
+            + "Opening the Data_EO.xls file failed, Please make sure that the file exists in the folder."
+        )
         sys.exit(1)
 
     """ In order to avoid that the numeric fields of the csv file take an invalid value and as a consequence
@@ -56,12 +56,15 @@ def ftp_upload():
         print(Fore.YELLOW + 'Establishing connection with IBM i Server (AS/400), please wait...')
         try:
             ftp.connect(config('Host'), 21, timeout=FTP_TIMEOUT)
-        except (OSError, all_errors) as err:
-            print(Fore.RED + 'Could not establish connection to the server ===>:', config('Host'), str(err))
-            waiting_time = 13
-            time.sleep(waiting_time)
+        except all_errors as err:
+            print(
+                Fore.RED
+                + 'Could not establish connection to the server ===>:',
+                config('Host'),
+                str(err),
+            )
             return
-        ftp.login(config('User'), config('password'))
+        ftp.login(config('user'), config('password'))
         print(Fore.GREEN + 'Connection established with ==>', ftp.getwelcome())
 
         print(ftp.cwd("/tmp"))
@@ -84,11 +87,14 @@ def ftp_upload():
         print(completed_process)
 
     except Exception as err:
-        print(Fore.RED + 'Could not establish connection to the server ===>:', config('Host'), str(err))
-        waiting_time = 13
-        time.sleep(waiting_time)
+        print(
+            Fore.RED + 'Could not establish connection to the server ===>:', config('Host'), str(err)
+        )
     finally:
-        ftp.close()
+        try:
+            ftp.close()
+        except Exception as exc:
+            print('Error closing FTP connection:', exc)
 
 
 if __name__ != "__main__":
