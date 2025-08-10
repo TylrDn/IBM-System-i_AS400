@@ -23,7 +23,7 @@ def button_confirm():
                 str(int((x / task) * 100)) + "% Iniciando Interfaz. Por Favor, Espere Hasta Que El Proceso Termine.")
             WindowFrame.update_idletasks()
 
-        completed_process = subprocess.run('python payroll_b.py')
+        completed_process = subprocess.run('python ../payroll_b.py')
         print(completed_process)
     except:
         print("An error has occurred in payroll_b")
