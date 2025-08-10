@@ -8,7 +8,7 @@
 import csv
 import sys
 import subprocess
-from ftplib import FTP
+from ftplib import FTP, all_errors
 import xlrd
 from decouple import config
 import time
@@ -16,6 +16,9 @@ from colorama import init, Fore
 
 # start colorama
 init()
+
+
+FTP_TIMEOUT = None
 
 
 def csv_from_excel():
@@ -48,12 +51,16 @@ def ftp_upload():
     file_transfer_name = "./Data_EO.csv"
     print('')
 
-    # Open ftp connection to the AS/400 server to start csv file transfer.
+    ftp = FTP()
     try:
         print(Fore.YELLOW + 'Establishing connection with IBM i Server (AS/400), please wait...')
-
-        ftp = FTP()
-        ftp.connect(config('Host'), 21, -999)
+        try:
+            ftp.connect(config('Host'), 21, timeout=FTP_TIMEOUT)
+        except (OSError, all_errors) as err:
+            print(Fore.RED + 'Could not establish connection to the server ===>:', config('Host'), str(err))
+            waiting_time = 13
+            time.sleep(waiting_time)
+            return
         ftp.login(config('User'), config('password'))
         print(Fore.GREEN + 'Connection established with ==>', ftp.getwelcome())
 
@@ -66,9 +73,8 @@ def ftp_upload():
             print(ftpResponse, file_transfer_name)
 
         ftp.quit()
-        ftp.close()
 
-        """ Call the interface to connect to IBM i - AS/400 via ftp and invoke the update and report 
+        """ Call the interface to connect to IBM i - AS/400 via ftp and invoke the update and report
         issuing programs... """
         completed_process = subprocess.run('ftp_cl_as400.bat')
         print(completed_process)
@@ -81,6 +87,8 @@ def ftp_upload():
         print(Fore.RED + 'Could not establish connection to the server ===>:', config('Host'), str(err))
         waiting_time = 13
         time.sleep(waiting_time)
+    finally:
+        ftp.close()
 
 
 if __name__ != "__main__":
