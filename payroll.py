@@ -5,6 +5,7 @@ import time
 from PIL import Image, ImageTk
 import subprocess
 import sys
+from pathlib import Path
 
 
 def button_confirm():
@@ -23,7 +24,11 @@ def button_confirm():
                 str(int((x / task) * 100)) + "% Iniciando Interfaz. Por Favor, Espere Hasta Que El Proceso Termine.")
             WindowFrame.update_idletasks()
 
-        completed_process = subprocess.run([sys.executable, 'payroll_b.py'])
+        script_path = Path(__file__).with_name("payroll_b.py")
+        completed_process = subprocess.run([
+            sys.executable,
+            str(script_path),
+        ], check=True)
         print(completed_process)
 
     except Exception:
