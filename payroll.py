@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from tkinter import Tk, Label, Button, RIGHT, LEFT, PhotoImage, HORIZONTAL, StringVar
-from tkinter.ttk import *
+from tkinter import Tk, Label, Button, RIGHT, LEFT, HORIZONTAL, StringVar
+from tkinter.ttk import Progressbar
 import time
 from PIL import Image, ImageTk
 import subprocess
+import sys
 
 
 def button_confirm():
@@ -22,10 +23,10 @@ def button_confirm():
                 str(int((x / task) * 100)) + "% Iniciando Interfaz. Por Favor, Espere Hasta Que El Proceso Termine.")
             WindowFrame.update_idletasks()
 
-        completed_process = subprocess.run('python payroll_b.py')
+        completed_process = subprocess.run([sys.executable, 'payroll_b.py'])
         print(completed_process)
 
-    except:
+    except Exception:
         print("An error has occurred in payroll_b")
     else:
         print("Successful execution of payroll_b")
