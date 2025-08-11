@@ -92,13 +92,40 @@ def call_program_via_ssh(
     user: str,
     cmd: str,
     key_path: Optional[str] = None,
+    *,
+    raw: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    """Run *cmd* on *host* via ``ssh`` and return the completed process."""
+    """Run *cmd* on *host* via ``ssh`` and return the completed process.
+
+    Parameters
+    ----------
+    host, user, cmd, key_path
+        Connection parameters passed directly to :command:`ssh`.
+    raw : bool, optional
+        If ``True`` the *cmd* string is sent to the remote shell verbatim.
+        When ``False`` (the default) the command is tokenised with
+        :func:`shlex.split` to reduce the chance of unintended interpretation
+        by the remote shell.  Tokenisation does **not** support complex shell
+        features such as pipes or redirects; in those cases set ``raw=True``
+        after validating the input.
+    """
 
     ssh_cmd = ["ssh"]
     if key_path:
         ssh_cmd.extend(["-i", key_path])
     ssh_cmd.append(f"{user}@{host}")
-    # Split the remote command into tokens to avoid shell injection issues
-    ssh_cmd.extend(shlex.split(cmd))
-    return subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
+    if raw:
+        ssh_cmd.append(cmd)
+    else:
+        # Split the remote command into tokens to avoid local shell injection
+        # issues; this does not support complex shell syntax.
+        ssh_cmd.extend(shlex.split(cmd))
+
+    try:
+        return subprocess.run(
+            ssh_cmd, capture_output=True, text=True, check=True
+        )
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            f"SSH command failed with exit code {exc.returncode}: {exc.stderr}"
+        ) from exc

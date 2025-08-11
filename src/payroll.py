@@ -29,11 +29,15 @@ def button_confirm():
         if not payroll_b_path.is_file():
             raise FileNotFoundError(f"Missing payroll_b script: {payroll_b_path}")
         completed_process = subprocess.run(
-            [sys.executable, str(payroll_b_path)], check=True, shell=False
+            [sys.executable, str(payroll_b_path)],
+            check=True,
+            shell=False,
+            capture_output=True,
+            text=True,
         )
         print(completed_process)
     except subprocess.CalledProcessError as exc:
-        print(f"An error has occurred in payroll_b: {exc}")
+        print(f"An error has occurred in payroll_b: {exc.stderr}")
         raise
     else:
         print("Successful execution of payroll_b")
