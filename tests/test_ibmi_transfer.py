@@ -79,10 +79,12 @@ def test_call_program_via_ftp_rcmd(monkeypatch):
 def test_call_program_via_ssh(monkeypatch):
     called = {}
 
-    def fake_run(cmd, capture_output, text):
+    def fake_run(cmd, capture_output, text, **kwargs):
         called["cmd"] = cmd
+        called.update(kwargs)
         return mock.Mock(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(ibmi_transfer.subprocess, "run", fake_run)
     ibmi_transfer.call_program_via_ssh("h", "u", "cmd", key_path="k")
     assert called["cmd"] == ["ssh", "-i", "k", "u@h", "cmd"]
+    assert called.get("check") is True

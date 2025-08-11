@@ -9,6 +9,7 @@ from __future__ import annotations
 import ftplib
 import os
 import subprocess
+import shlex
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -98,10 +99,6 @@ def call_program_via_ssh(
     if key_path:
         ssh_cmd.extend(["-i", key_path])
     ssh_cmd.append(f"{user}@{host}")
-    ssh_cmd.append(cmd)
-    proc = subprocess.run(ssh_cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise subprocess.CalledProcessError(
-            proc.returncode, ssh_cmd, output=proc.stdout, stderr=proc.stderr
-        )
-    return proc
+    # Split the remote command into tokens to avoid shell injection issues
+    ssh_cmd.extend(shlex.split(cmd))
+    return subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
