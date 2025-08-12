@@ -53,3 +53,47 @@ Set `PYI_ONEFILE=1` to create a single-file binary.
 
 ## License
 This project is released under the MIT License.
+
+## Staging ingest/apply workflow
+
+An additional, SSH/SFTP-only pipeline stages a CSV/XLSX file on IBM i, runs
+server-side validation and merges into shadow tables.
+
+### Quickstart
+
+```bash
+make install
+python -m src.runner --file tests/smoke_local.csv --dry-run
+```
+
+Remove `--dry-run` and populate `.env` with real host details to execute
+against an IBM i partition.
+
+### Configuration
+
+`.env` keys:
+
+```
+IBMI_HOST=hostname
+IBMI_USER=user
+IBMI_SSH_KEY=/path/to/key
+#IBMI_PASSWORD=optional
+LIB_STG=MYLIB
+IFS_STAGING_DIR=/home/user/staging
+JOBQ=QSYSNOMAX
+OUTQ=QPRINT
+ALLOW_AUTO_HOSTKEY=false
+```
+
+### Troubleshooting
+
+- Use `--dry-run` to preview actions without side effects.
+- Ensure the user profile can create objects in `${LIB_STG}` and write to
+  `${IFS_STAGING_DIR}`.
+- All processing occurs in staging libraries and directories only.
+
+### Why this won’t modify your existing codebase destructively
+
+The workflow is additive: it creates objects only in the staging library
+`${LIB_STG}` and directory `${IFS_STAGING_DIR}`. No production libraries,
+queues or existing source files are touched.
