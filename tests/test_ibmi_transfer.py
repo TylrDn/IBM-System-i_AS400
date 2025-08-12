@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from types import SimpleNamespace
 from unittest import mock
@@ -21,6 +22,9 @@ def test_upload_csv_via_ftp(monkeypatch, tmp_path):
             self.user = user
             self.password = password
 
+        def prot_p(self):
+            self.tls = True
+
         def cwd(self, path):
             self.path = path
 
@@ -35,7 +39,9 @@ def test_upload_csv_via_ftp(monkeypatch, tmp_path):
         def close(self):
             pass
 
-    monkeypatch.setattr(ibmi_transfer, "ftplib", SimpleNamespace(FTP=FakeFTP, FTP_TLS=FakeFTP))
+    monkeypatch.setattr(
+        ibmi_transfer, "ftplib", SimpleNamespace(FTP=FakeFTP, FTP_TLS=FakeFTP)
+    )
     local = tmp_path / "sample.csv"
     local.write_text("hello")
     resp = ibmi_transfer.upload_csv_via_ftp("h", "u", "p", local, "/tmp")
@@ -59,6 +65,9 @@ def test_call_program_via_ftp_rcmd(monkeypatch):
         def login(self, user, password):
             pass
 
+        def prot_p(self):
+            self.tls = True
+
         def sendcmd(self, cmd):
             self.cmd = cmd
             return "250 OK"
@@ -69,7 +78,9 @@ def test_call_program_via_ftp_rcmd(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr(ibmi_transfer, "ftplib", SimpleNamespace(FTP=FakeFTP, FTP_TLS=FakeFTP))
+    monkeypatch.setattr(
+        ibmi_transfer, "ftplib", SimpleNamespace(FTP=FakeFTP, FTP_TLS=FakeFTP)
+    )
     resp = ibmi_transfer.call_program_via_ftp_rcmd("h", "u", "p", "LIB", "PGM", ["'A'"])
     ftp = FakeFTP.last
     assert resp == "250 OK"

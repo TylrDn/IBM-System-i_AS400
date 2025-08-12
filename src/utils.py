@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
-from typing import Callable, Any
+from typing import Callable
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -15,8 +15,7 @@ from dotenv import load_dotenv
 def setup_logger(level: int = logging.INFO) -> None:
     """Configure root logger."""
     logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
 
 
@@ -30,12 +29,14 @@ def timed(fn: Callable) -> Callable:
             return fn(*args, **kwargs)
         finally:
             duration = time.time() - start
-            logging.getLogger(fn.__module__).debug("%s took %.2fs", fn.__name__, duration)
+            logging.getLogger(fn.__module__).debug(
+                "%s took %.2fs", fn.__name__, duration
+            )
 
     return wrapper
 
 
-def sniff_csv(path: Path) -> csv.Dialect:
+def sniff_csv(path: Path) -> type[csv.Dialect]:
     """Sniff CSV dialect and normalise to UTF-8 LF."""
     data = path.read_text(encoding="utf-8")
     path.write_text(data.replace("\r\n", "\n").replace("\r", "\n"), encoding="utf-8")
@@ -85,8 +86,8 @@ def load_config(env_file: str = ".env") -> Config:
     jobq = os.getenv("JOBQ", "QSYSNOMAX")
     outq = os.getenv("OUTQ", "QPRINT")
     allow = os.getenv("ALLOW_AUTO_HOSTKEY", "false").lower() == "true"
+    if not all([host, user, lib_stg, ifs_dir]):
+        raise ValueError("Missing required config keys")
+    assert host and user and lib_stg and ifs_dir
     cfg = Config(host, user, ssh_key, password, lib_stg, ifs_dir, jobq, outq, allow)
-    missing = [k for k, v in cfg.__dict__.items() if not v and k not in ("ssh_key", "password")]
-    if missing:
-        raise ValueError(f"Missing required config keys: {', '.join(missing)}")
     return cfg

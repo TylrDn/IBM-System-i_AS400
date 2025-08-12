@@ -10,8 +10,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="IBM i staging workflow")
     parser.add_argument("--file", required=True, help="Path to CSV or XLSX")
     parser.add_argument("--sync", action="store_true", help="Upload scripts before run")
-    parser.add_argument("--fetch-outputs", action="store_true", help="Download result files")
-    parser.add_argument("--dry-run", action="store_true", help="Print actions without executing")
+    parser.add_argument(
+        "--fetch-outputs", action="store_true", help="Download result files"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print actions without executing"
+    )
     parser.add_argument("--timeout-seconds", type=int, default=600)
     parser.add_argument("--jobq")
     parser.add_argument("--outq")

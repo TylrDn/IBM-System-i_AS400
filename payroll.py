@@ -1,87 +1,85 @@
-# -*- coding: utf-8 -*-
-from tkinter import Tk, Label, Button, RIGHT, LEFT, HORIZONTAL, StringVar
-from tkinter.ttk import Progressbar
-import time
-from PIL import Image, ImageTk
+from __future__ import annotations
+
+import argparse
+import logging
 import subprocess
 import sys
+import time
 from pathlib import Path
+from tkinter import HORIZONTAL, LEFT, RIGHT, Button, Label, StringVar, Tk
+from tkinter.ttk import Progressbar
+
+from PIL import Image, ImageTk
 
 
-def button_confirm():
-    """
-    runs the interface
+parser = argparse.ArgumentParser(description="Payroll GUI wrapper")
+parser.add_argument("--dry-run", action="store_true", help="Validate without uploading")
+parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
+args = parser.parse_args()
 
-    """
+logging.basicConfig(
+    level=logging.DEBUG if args.verbose else logging.INFO, format="%(message)s"
+)
+log = logging.getLogger(__name__)
+
+
+def button_confirm() -> None:
     try:
         task = 10
-        x = 0
-        while x < task:
+        for x in range(task):
             time.sleep(1)
-            progress_bar['value'] += 10
-            x += 1
+            progress_bar["value"] += 10
             percent.set(
-                str(int((x / task) * 100)) + "% Iniciando Interfaz. Por Favor, Espere Hasta Que El Proceso Termine.")
-            WindowFrame.update_idletasks()
-
+                f"{int(((x + 1) / task) * 100)}% Iniciando Interfaz. Por Favor, Espere Hasta Que El Proceso Termine."
+            )
+            window.update_idletasks()
         script_path = Path(__file__).with_name("payroll_b.py").resolve()
         if not script_path.is_file():
             raise FileNotFoundError(f"Missing payroll_b script: {script_path}")
+        cmd = [sys.executable, str(script_path)]
+        if args.dry_run:
+            cmd.append("--dry-run")
+        if args.verbose:
+            cmd.append("--verbose")
         completed_process = subprocess.run(
-            [sys.executable, str(script_path)],
-            check=True,
-            capture_output=True,
-            text=True,
-            shell=False,
+            cmd, check=True, capture_output=True, text=True, shell=False
         )
-        print(completed_process)
-
+        log.debug(completed_process.stdout)
     except subprocess.CalledProcessError as exc:
-        print(f"An error has occurred in payroll_b: {exc.stderr}")
+        log.error("An error has occurred in payroll_b: %s", exc.stderr)
         raise
     else:
-        print("Successful execution of payroll_b")
-
-    WindowFrame.quit()
-
-
-def button_cancel():
-    """
-    Cancel process and exit...
-
-    """
-    WindowFrame.quit()
+        log.info("Successful execution of payroll_b")
+    window.quit()
 
 
-WindowFrame = Tk()
-WindowFrame.geometry('500x500')
-# WindowFrame.eval('tk::PlaceWindow . center')
-WindowFrame.title("Interfaz Ajustes Salariales de Nomina SPI")
+def button_cancel() -> None:
+    window.quit()
 
-lbl = Label(WindowFrame, text='¿Desea Confirmar la Ejecucion del Proceso?')
-lbl.config(font=('Arial)', 10))
+
+window = Tk()
+window.geometry("500x500")
+window.title("Interfaz Ajustes Salariales de Nomina SPI")
+
+lbl = Label(window, text="¿Desea Confirmar la Ejecucion del Proceso?")
+lbl.config(font=("Arial", 10))
 lbl.pack()
 
-# Progress bar ...
 percent = StringVar()
-progress_bar = Progressbar(WindowFrame, orient=HORIZONTAL, length=300, mode="determinate")
+progress_bar = Progressbar(window, orient=HORIZONTAL, length=300, mode="determinate")
 progress_bar.pack(pady=20)
-
-Label(WindowFrame, textvariable=percent).pack()
+Label(window, textvariable=percent).pack()
 
 image = Image.open("icons8-payroll-64.png")
 image_ = ImageTk.PhotoImage(image)
-lbl_img = Label(WindowFrame, image=image_)
-lbl_img.pack()
+Label(window, image=image_).pack()
 
-but1 = Button(WindowFrame, text='      OK           ', command=button_confirm)
-but1.pack(side=LEFT, padx=15, pady=20)
-but1.pack()
+Button(window, text="      OK           ", command=button_confirm).pack(
+    side=LEFT, padx=15, pady=20
+)
+Button(window, text="    Cancel     ", command=button_cancel).pack(
+    side=RIGHT, padx=15, pady=20
+)
 
-but2 = Button(WindowFrame, text='    Cancel     ', command=button_cancel)
-but2.pack(side=RIGHT, padx=15, pady=20)
-but2.pack()
-
-# WindowFrame.config(bg='#ce9dd4')
-WindowFrame.resizable(0, 0)
-WindowFrame.mainloop()
+window.resizable(False, False)
+window.mainloop()

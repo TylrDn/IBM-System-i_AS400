@@ -1,27 +1,21 @@
-from distutils.core import setup
-import sys
+from setuptools import setup, find_packages
 
-if sys.platform == "win32":
-    import py2exe  # type: ignore  # noqa: F401
-
-    if len(sys.argv) == 1:
-        sys.argv.append("py2exe")
-
-    setup(
-        name="payroll",
-        version="1.0",
-        description="Automatic process of salary adjustments",
-        author="Clay Lancini",
-        author_email="clay.lancini@proton.me",
-        url="url del proyecto",
-        license="none",
-        scripts=["payroll.py"],
-        options={"py2exe": {"includes": ["tkinter"], "bundle_files": 3}},
-        windows=[{
-            "script": "payroll.py",
-            "icon_resources": [(1, "icons8-payroll-64.ico")],
-        }],
-        zipfile=None,
-    )
-else:
-    setup(name="payroll", version="1.0", scripts=["payroll.py"])
+setup(
+    name="ibmi-payroll",
+    version="0.1.0",
+    description="Excel payroll upload tool for IBM i (formerly AS/400)",
+    author="Clay Lancini",
+    license="MIT",
+    packages=find_packages(),
+    install_requires=[
+        "Pillow~=9.5.0",
+        "xlrd~=2.0.1",
+        "colorama~=0.4.6",
+        "python-dotenv~=1.0",
+        "paramiko~=3.4",
+        "pandas~=2.2",
+    ],
+    entry_points={
+        "console_scripts": ["payroll=src.runner:main"],
+    },
+)
