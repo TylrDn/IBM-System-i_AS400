@@ -1,4 +1,4 @@
-:: Conectarse a IBM i (AS/400) y llamar al proceso de ajuste Salarial de Nomina
+:: Conectarse a IBM i (formerly AS/400) y llamar al proceso de ajuste Salarial de Nomina
 :: By Clay Lanzino.  Noviembre del 2022
 
 

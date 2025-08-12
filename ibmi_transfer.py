@@ -8,14 +8,16 @@ from __future__ import annotations
 
 import ftplib
 import os
-import subprocess
 import shlex
+import subprocess
 from pathlib import Path
 from typing import Iterable, Optional
 
+import paramiko
+
 
 class FTPError(RuntimeError):
-    """Raised when an FTP command returns a non-success status."""
+    """Raised when a network command returns a non-success status."""
 
 
 def upload_csv_via_ftp(
@@ -24,33 +26,65 @@ def upload_csv_via_ftp(
     password: str,
     local_path: str | os.PathLike[str],
     remote_dir: str,
-    use_tls: bool = False,
+    *,
+    use_tls: bool = True,
+    retries: int = 3,
 ) -> str:
-    """Upload *local_path* to *remote_dir* on the IBM i server.
+    """Upload *local_path* to *remote_dir* on the IBM i server using FTP/FTPS."""
 
-    Returns the server response from the ``STOR`` command.
-    """
-
-    ftp_class = ftplib.FTP_TLS if use_tls else ftplib.FTP
-    ftp = ftp_class()
-    try:
-        ftp.connect(host, 21)
-        ftp.login(user, password)
-        if use_tls and isinstance(ftp, ftplib.FTP_TLS):
-            ftp.prot_p()
-        ftp.cwd(remote_dir)
-        path = Path(local_path)
-        with path.open("rb") as handle:
-            resp = ftp.storbinary(f"STOR {path.name}", handle)
-        if not resp.startswith("226") and not resp.startswith("250"):
-            raise FTPError(resp)
-        ftp.quit()
-        return resp
-    finally:
+    for attempt in range(1, retries + 1):
+        ftp_class = ftplib.FTP_TLS if use_tls else ftplib.FTP
+        ftp = ftp_class()
         try:
-            ftp.close()
-        except Exception:
-            pass
+            ftp.connect(host, 21)
+            ftp.login(user, password)
+            if use_tls and isinstance(ftp, ftplib.FTP_TLS):
+                ftp.prot_p()
+            ftp.cwd(remote_dir)
+            path = Path(local_path)
+            with path.open("rb") as handle:
+                resp = ftp.storbinary(f"STOR {path.name}", handle)
+            if not resp.startswith(("226", "250")):
+                raise FTPError(resp)
+            ftp.quit()
+            return resp
+        except Exception as exc:
+            if attempt == retries:
+                raise FTPError(f"FTP upload failed: {exc}")
+        finally:
+            try:
+                ftp.close()
+            except Exception:
+                pass
+    raise FTPError("FTP upload failed")
+
+
+def upload_csv_via_sftp(
+    host: str,
+    user: str,
+    password: str,
+    local_path: str | os.PathLike[str],
+    remote_dir: str,
+    *,
+    retries: int = 3,
+) -> None:
+    """Upload *local_path* to *remote_dir* on the IBM i server using SFTP."""
+
+    for attempt in range(1, retries + 1):
+        try:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(host, username=user, password=password)
+            sftp = client.open_sftp()
+            path = Path(local_path)
+            sftp.put(str(path), f"{remote_dir}/{path.name}")
+            sftp.close()
+            client.close()
+            return
+        except Exception as exc:
+            if attempt == retries:
+                raise FTPError(f"SFTP upload failed: {exc}")
+    raise FTPError("SFTP upload failed")
 
 
 def call_program_via_ftp_rcmd(
@@ -60,31 +94,38 @@ def call_program_via_ftp_rcmd(
     lib: str,
     program: str,
     parms: Iterable[str] | None = None,
-    use_tls: bool = False,
+    *,
+    use_tls: bool = True,
+    retries: int = 3,
 ) -> str:
     """Invoke an IBM i program using the FTP ``QUOTE RCMD`` command."""
 
-    ftp_class = ftplib.FTP_TLS if use_tls else ftplib.FTP
-    ftp = ftp_class()
-    try:
-        ftp.connect(host, 21)
-        ftp.login(user, password)
-        if use_tls and isinstance(ftp, ftplib.FTP_TLS):
-            ftp.prot_p()
-        cmd = f"RCMD CALL PGM({lib}/{program})"
-        if parms:
-            parm_str = " ".join(parms)
-            cmd += f" PARM({parm_str})"
-        resp = ftp.sendcmd(f"QUOTE {cmd}")
-        if not resp.startswith("2"):
-            raise FTPError(resp)
-        ftp.quit()
-        return resp
-    finally:
+    for attempt in range(1, retries + 1):
+        ftp_class = ftplib.FTP_TLS if use_tls else ftplib.FTP
+        ftp = ftp_class()
         try:
-            ftp.close()
-        except Exception:
-            pass
+            ftp.connect(host, 21)
+            ftp.login(user, password)
+            if use_tls and isinstance(ftp, ftplib.FTP_TLS):
+                ftp.prot_p()
+            cmd = f"RCMD CALL PGM({lib}/{program})"
+            if parms:
+                parm_str = " ".join(parms)
+                cmd += f" PARM({parm_str})"
+            resp = ftp.sendcmd(f"QUOTE {cmd}")
+            if not resp.startswith("2"):
+                raise FTPError(resp)
+            ftp.quit()
+            return resp
+        except Exception as exc:
+            if attempt == retries:
+                raise FTPError(f"FTP RCMD failed: {exc}")
+        finally:
+            try:
+                ftp.close()
+            except Exception:
+                pass
+    raise FTPError("FTP RCMD failed")
 
 
 def call_program_via_ssh(
@@ -95,20 +136,7 @@ def call_program_via_ssh(
     *,
     raw: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    """Run *cmd* on *host* via ``ssh`` and return the completed process.
-
-    Parameters
-    ----------
-    host, user, cmd, key_path
-        Connection parameters passed directly to :command:`ssh`.
-    raw : bool, optional
-        If ``True`` the *cmd* string is sent to the remote shell verbatim.
-        When ``False`` (the default) the command is tokenised with
-        :func:`shlex.split` to reduce the chance of unintended interpretation
-        by the remote shell.  Tokenisation does **not** support complex shell
-        features such as pipes or redirects; in those cases set ``raw=True``
-        after validating the input.
-    """
+    """Run *cmd* on *host* via ``ssh`` and return the completed process."""
 
     ssh_cmd = ["ssh"]
     if key_path:
@@ -117,14 +145,10 @@ def call_program_via_ssh(
     if raw:
         ssh_cmd.append(cmd)
     else:
-        # Split the remote command into tokens to avoid local shell injection
-        # issues; this does not support complex shell syntax.
         ssh_cmd.extend(shlex.split(cmd))
 
     try:
-        return subprocess.run(
-            ssh_cmd, capture_output=True, text=True, check=True
-        )
+        return subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(
             f"SSH command failed with exit code {exc.returncode}: {exc.stderr}"

@@ -1,11 +1,11 @@
 # Project Setup Guide
 
-This guide walks you through configuring the IBM System i / AS400 Payroll
+This guide walks you through configuring the IBM i (formerly AS/400) Payroll
 Interface for local development or demonstration.
 
 ## 1. Requirements
 - **Python**: version 3.8 or later.
-- **IBM i (AS/400) access**: either your own server or a free PUB400 account.
+- **IBM i (formerly AS/400) access**: either your own server or a free PUB400 account.
 - **Linux prerequisites** (Debian/Ubuntu):
   ```bash
   sudo apt-get install python3-tk openssh-client make
@@ -31,15 +31,13 @@ pip install -r requirements.txt
    > **Never commit** your filled-in `.env` file to source control.
 
 ## 4. Prepare payroll data
-- Place `Data_EO.xls` (or your own payroll spreadsheet with the same format) in
-the project root. The program converts it to `Data_EO.csv` automatically.
+- Use `examples/payroll_sample.csv` as a template for your own payroll data.
 
 ## 5. Run the interface
 ```bash
 make run
 ```
-Confirm the prompt. The script converts the Excel file, uploads it to the IBM i
-via FTP and executes the remote program (over FTP RCMD or SSH).
+Confirm the prompt. The script converts the Excel file, uploads it securely to the IBM i and executes the remote program (via SSH or FTPS RCMD).
 
 ## 6. Packaging
 To build a Linux distributable:

@@ -27,8 +27,10 @@ def csv_from_excel(
         variable or ``Data_EO.csv`` if not set.
     """
 
-    xls_file = xls_file or os.getenv("XLS_FILE", "Data_EO.xls")
-    csv_file = csv_file or os.getenv("CSV_FILE", "Data_EO.csv")
+    xls_file = xls_file or os.getenv("XLS_FILE", "examples/payroll_sample.xlsx")
+    assert xls_file is not None
+    csv_file = csv_file or os.getenv("CSV_FILE", "examples/payroll_sample.csv")
+    assert csv_file is not None
 
     counter = 0
     try:
