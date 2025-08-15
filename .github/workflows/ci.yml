@@ -12,6 +12,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install OS packages
         run: sudo apt-get update && sudo apt-get install -y python3-tk openssh-client
+      - name: Save OS package state
+        run: echo "OS packages installed" > os-packages.txt
+      - name: Upload OS package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-packages
+          path: os-packages.txt
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -42,8 +49,10 @@ jobs:
     needs: setup
     steps:
       - uses: actions/checkout@v4
-      - name: Install OS packages
-        run: sudo apt-get update && sudo apt-get install -y python3-tk openssh-client
+      - name: Download OS package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: os-packages
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
