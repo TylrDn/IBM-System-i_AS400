@@ -7,6 +7,7 @@ protocols are used to avoid leaking credentials or data in transit.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shlex
@@ -54,11 +55,11 @@ def _init_client() -> paramiko.SSHClient:
 
 
 def _safe_close(obj) -> None:
-    """Attempt to close *obj*, ignoring missing implementations."""
+    """Attempt to close *obj*, logging but ignoring errors."""
     try:
         obj.close()
-    except Exception:
-        pass
+    except Exception as exc:  # pragma: no cover - best effort cleanup
+        logging.getLogger(__name__).debug("close failed: %s", exc)
 
 
 def upload_csv_via_sftp(
@@ -111,7 +112,7 @@ def call_program_via_ssh(
     client = _init_client()
     try:
         client.connect(host, username=user, key_filename=key_path)
-        _, stdout, stderr = client.exec_command(command)
+        _, stdout, stderr = client.exec_command(command)  # nosec B601
         exit_status = stdout.channel.recv_exit_status()
         _ = stdout.read().decode()
         err = stderr.read().decode()
