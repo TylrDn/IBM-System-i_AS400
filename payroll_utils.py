@@ -69,7 +69,6 @@ def csv_from_excel(
         Destination CSV file name. Defaults to the ``CSV_FILE`` environment
         variable or ``Data_EO.csv`` if not set.
     """
-
     xls_file = xls_file or os.getenv("XLS_FILE", "examples/payroll_sample.xlsx")
     csv_file = csv_file or os.getenv("CSV_FILE", "examples/payroll_sample.csv")
     if xls_file is None or csv_file is None:
