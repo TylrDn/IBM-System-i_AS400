@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="ibmi-payroll",
@@ -8,7 +8,7 @@ setup(
     license="MIT",
     packages=find_packages(),
     install_requires=[
-        "Pillow~=9.5.0",
+        "Pillow>=10.3.0",
         "xlrd~=2.0.1",
         "colorama~=0.4.6",
         "python-dotenv~=1.0",

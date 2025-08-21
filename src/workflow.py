@@ -1,9 +1,19 @@
 import logging
+import re
+import tempfile
 import time
 from pathlib import Path
 
 from .ibmi_client import IBMiClient
-from .utils import sha256_file, sniff_csv, xlsx_to_csv, timed
+from .utils import sha256_file, sniff_csv, timed, xlsx_to_csv
+
+_SAFE_NAME = re.compile(r"^[A-Za-z0-9_./]+$")
+
+
+def _ensure_safe(value: str, field: str) -> str:
+    if not _SAFE_NAME.match(value):
+        raise ValueError(f"Invalid characters in {field}")
+    return value
 
 
 @timed
@@ -30,15 +40,21 @@ def run_workflow(
     digest = sha256_file(csv_path)
     log.info("Local SHA256=%s", digest)
 
+    ifs_dir = _ensure_safe(config.ifs_dir, "ifs_dir")
+    lib_stg = _ensure_safe(config.lib_stg, "lib_stg")
+    outq = _ensure_safe(config.outq, "outq")
+    jobq = _ensure_safe(config.jobq, "jobq")
+
     remote_dirs = [
-        config.ifs_dir,
-        f"{config.ifs_dir}/in",
-        f"{config.ifs_dir}/out",
-        f"{config.ifs_dir}/run",
-        f"{config.ifs_dir}/scripts",
+        ifs_dir,
+        f"{ifs_dir}/in",
+        f"{ifs_dir}/out",
+        f"{ifs_dir}/run",
+        f"{ifs_dir}/scripts",
     ]
 
-    remote_csv = f"{config.ifs_dir}/in/{csv_path.name}"
+    csv_name = _ensure_safe(csv_path.name, "csv file name")
+    remote_csv = f"{ifs_dir}/in/{csv_name}"
 
     with IBMiClient(config, dry_run=dry_run) as client:
         client.ensure_remote_dirs(remote_dirs)
@@ -46,24 +62,30 @@ def run_workflow(
         if sync:
             for script in ("setup.sql", "apply.sql", "process.clp", "teardown.sql"):
                 local_script = Path("ibmi") / script
-                remote_script = f"{config.ifs_dir}/scripts/{script}"
-                client.sftp_put(local_script, remote_script)
+                text = local_script.read_text()
+                text = text.replace("${LIB_STG}", lib_stg)
+                with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
+                    tmp.write(text)
+                    tmp_path = Path(tmp.name)
+                remote_script = f"{ifs_dir}/scripts/{script}"
+                client.sftp_put(tmp_path, remote_script)
+                tmp_path.unlink()
 
         client.sftp_put(csv_path, remote_csv)
 
         setup_cmd = (
-            f"system \"RUNSQLSTM SRCSTMF('{config.ifs_dir}/scripts/setup.sql') "
-            f"SETVAR((LIB_STG '{config.lib_stg}')) COMMIT(*NONE) NAMING(*SQL)\""
+            f"system \"RUNSQLSTM SRCSTMF('{ifs_dir}/scripts/setup.sql') "
+            f"SETVAR((LIB_STG '{lib_stg}')) COMMIT(*NONE) NAMING(*SQL)\""
         )
         client.ssh_run(setup_cmd)
 
         submit_cmd = (
-            f"system \"SBMJOB CMD(CALL PGM({config.lib_stg}/PROCESS) PARM('{config.lib_stg}' "
-            f"'{config.ifs_dir}' '{config.outq}')) JOBQ({config.jobq})\""
+            f"system \"SBMJOB CMD(CALL PGM({lib_stg}/PROCESS) PARM('{lib_stg}' "
+            f"'{ifs_dir}' '{outq}')) JOBQ({jobq})\""
         )
         client.ssh_run(submit_cmd)
 
-        marker_dir = f"{config.ifs_dir}/run"
+        marker_dir = f"{ifs_dir}/run"
         if not dry_run:
             end = time.time() + timeout
             status_file = None
@@ -86,7 +108,7 @@ def run_workflow(
             if fetch_outputs:
                 out_dir = Path("outputs")
                 out_dir.mkdir(exist_ok=True)
-                result_remote = f"{config.ifs_dir}/out/{csv_path.stem}_result.csv"
+                result_remote = f"{ifs_dir}/out/{csv_path.stem}_result.csv"
                 result_local = out_dir / f"{csv_path.stem}_result.csv"
                 try:
                     client.sftp_get(result_remote, result_local)
@@ -99,9 +121,11 @@ def run_workflow(
 @timed
 def teardown(config, *, dry_run: bool = False) -> None:
     """Drop staging schema and objects."""
+    ifs_dir = _ensure_safe(config.ifs_dir, "ifs_dir")
+    lib_stg = _ensure_safe(config.lib_stg, "lib_stg")
     cmd = (
-        f"system \"RUNSQLSTM SRCSTMF('{config.ifs_dir}/scripts/teardown.sql') "
-        f"SETVAR((LIB_STG '{config.lib_stg}')) COMMIT(*NONE) NAMING(*SQL)\""
+        f"system \"RUNSQLSTM SRCSTMF('{ifs_dir}/scripts/teardown.sql') "
+        f"SETVAR((LIB_STG '{lib_stg}')) COMMIT(*NONE) NAMING(*SQL)\""
     )
     with IBMiClient(config, dry_run=dry_run) as client:
         client.ssh_run(cmd)

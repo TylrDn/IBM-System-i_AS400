@@ -1,62 +1,26 @@
 """Utilities for transferring files and invoking programs on IBM i.
 
 This module provides pure-Python helpers for uploading payroll CSV files
-and executing IBM i programs over FTP or SSH. Network operations are kept
-simple to ease mocking in tests."""
+and executing IBM i programs over secure channels. Only encrypted network
+protocols are used to avoid leaking credentials or data in transit.
+"""
 
 from __future__ import annotations
 
-import ftplib
 import os
+import re
 import shlex
 import subprocess
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 import paramiko
 
+_SAFE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
 
-class FTPError(RuntimeError):
+
+class TransferError(RuntimeError):
     """Raised when a network command returns a non-success status."""
-
-
-def upload_csv_via_ftp(
-    host: str,
-    user: str,
-    password: str,
-    local_path: str | os.PathLike[str],
-    remote_dir: str,
-    *,
-    use_tls: bool = True,
-    retries: int = 3,
-) -> str:
-    """Upload *local_path* to *remote_dir* on the IBM i server using FTP/FTPS."""
-
-    for attempt in range(1, retries + 1):
-        ftp_class = ftplib.FTP_TLS if use_tls else ftplib.FTP
-        ftp = ftp_class()
-        try:
-            ftp.connect(host, 21)
-            ftp.login(user, password)
-            if use_tls and isinstance(ftp, ftplib.FTP_TLS):
-                ftp.prot_p()
-            ftp.cwd(remote_dir)
-            path = Path(local_path)
-            with path.open("rb") as handle:
-                resp = ftp.storbinary(f"STOR {path.name}", handle)
-            if not resp.startswith(("226", "250")):
-                raise FTPError(resp)
-            ftp.quit()
-            return resp
-        except Exception as exc:
-            if attempt == retries:
-                raise FTPError(f"FTP upload failed: {exc}")
-        finally:
-            try:
-                ftp.close()
-            except Exception:
-                pass
-    raise FTPError("FTP upload failed")
 
 
 def upload_csv_via_sftp(
@@ -70,6 +34,8 @@ def upload_csv_via_sftp(
 ) -> None:
     """Upload *local_path* to *remote_dir* on the IBM i server using SFTP."""
 
+    if not _SAFE_PATH.match(remote_dir):
+        raise ValueError("Unsafe remote directory")
     for attempt in range(1, retries + 1):
         try:
             client = paramiko.SSHClient()
@@ -81,51 +47,9 @@ def upload_csv_via_sftp(
             sftp.close()
             client.close()
             return
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover - network dependent
             if attempt == retries:
-                raise FTPError(f"SFTP upload failed: {exc}")
-    raise FTPError("SFTP upload failed")
-
-
-def call_program_via_ftp_rcmd(
-    host: str,
-    user: str,
-    password: str,
-    lib: str,
-    program: str,
-    parms: Iterable[str] | None = None,
-    *,
-    use_tls: bool = True,
-    retries: int = 3,
-) -> str:
-    """Invoke an IBM i program using the FTP ``QUOTE RCMD`` command."""
-
-    for attempt in range(1, retries + 1):
-        ftp_class = ftplib.FTP_TLS if use_tls else ftplib.FTP
-        ftp = ftp_class()
-        try:
-            ftp.connect(host, 21)
-            ftp.login(user, password)
-            if use_tls and isinstance(ftp, ftplib.FTP_TLS):
-                ftp.prot_p()
-            cmd = f"RCMD CALL PGM({lib}/{program})"
-            if parms:
-                parm_str = " ".join(parms)
-                cmd += f" PARM({parm_str})"
-            resp = ftp.sendcmd(f"QUOTE {cmd}")
-            if not resp.startswith("2"):
-                raise FTPError(resp)
-            ftp.quit()
-            return resp
-        except Exception as exc:
-            if attempt == retries:
-                raise FTPError(f"FTP RCMD failed: {exc}")
-        finally:
-            try:
-                ftp.close()
-            except Exception:
-                pass
-    raise FTPError("FTP RCMD failed")
+                raise TransferError(f"SFTP upload failed: {exc}") from exc
 
 
 def call_program_via_ssh(
@@ -153,3 +77,4 @@ def call_program_via_ssh(
         raise RuntimeError(
             f"SSH command failed with exit code {exc.returncode}: {exc.stderr}"
         ) from exc
+

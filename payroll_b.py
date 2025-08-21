@@ -5,17 +5,13 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import re
 from dataclasses import dataclass
 
 from colorama import init
 from dotenv import load_dotenv
 
-from ibmi_transfer import (
-    call_program_via_ftp_rcmd,
-    call_program_via_ssh,
-    upload_csv_via_ftp,
-    upload_csv_via_sftp,
-)
+from ibmi_transfer import call_program_via_ssh, upload_csv_via_sftp
 from payroll_utils import csv_from_excel
 
 
@@ -28,7 +24,6 @@ class Config:
     lib: str
     program: str
     csv_file: str
-    use_ssh: bool
 
 
 def load_config() -> Config:
@@ -41,7 +36,6 @@ def load_config() -> Config:
         lib=os.environ.get("LIB", ""),
         program=os.environ.get("PROGRAM", ""),
         csv_file=os.environ.get("CSV_FILE", "examples/payroll_sample.csv"),
-        use_ssh=os.environ.get("USE_SSH", "1") == "1",
     )
 
 
@@ -67,21 +61,14 @@ def main() -> int:
         logger.info("Dry run: would upload %s to %s", cfg.csv_file, cfg.remote_dir)
         return 0
     logger.info("Uploading %s to %s", cfg.csv_file, cfg.remote_dir)
-    if cfg.use_ssh:
-        upload_csv_via_sftp(
-            cfg.host, cfg.user, cfg.password, cfg.csv_file, cfg.remote_dir
-        )
-        cmd = f"system 'CALL PGM({cfg.lib}/{cfg.program})'"
-        logger.info("Running remote program via SSH")
-        call_program_via_ssh(cfg.host, cfg.user, cmd, os.environ.get("SSH_KEY"))
-    else:
-        upload_csv_via_ftp(
-            cfg.host, cfg.user, cfg.password, cfg.csv_file, cfg.remote_dir, use_tls=True
-        )
-        logger.info("Running remote program via FTP RCMD over TLS")
-        call_program_via_ftp_rcmd(
-            cfg.host, cfg.user, cfg.password, cfg.lib, cfg.program, use_tls=True
-        )
+    upload_csv_via_sftp(cfg.host, cfg.user, cfg.password, cfg.csv_file, cfg.remote_dir)
+    if not re.fullmatch(r"[A-Za-z0-9_]+", cfg.lib):
+        raise ValueError("Invalid library name")
+    if not re.fullmatch(r"[A-Za-z0-9_]+", cfg.program):
+        raise ValueError("Invalid program name")
+    cmd = f"system 'CALL PGM({cfg.lib}/{cfg.program})'"
+    logger.info("Running remote program via SSH")
+    call_program_via_ssh(cfg.host, cfg.user, cmd, os.environ.get("SSH_KEY"))
     return 0
 
 

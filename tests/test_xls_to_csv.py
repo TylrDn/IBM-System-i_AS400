@@ -1,11 +1,12 @@
 import csv
-from pathlib import Path
 import sys
+from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-import pytest
 
-from payroll_utils import csv_from_excel
+import pytest  # noqa: E402
+
+from payroll_utils import csv_from_excel  # noqa: E402
 
 
 def test_xls_to_csv(tmp_path):

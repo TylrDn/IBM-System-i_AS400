@@ -28,9 +28,11 @@ def csv_from_excel(
     """
 
     xls_file = xls_file or os.getenv("XLS_FILE", "examples/payroll_sample.xlsx")
-    assert xls_file is not None
+    if xls_file is None:
+        raise ValueError("Missing path to XLS file")
     csv_file = csv_file or os.getenv("CSV_FILE", "examples/payroll_sample.csv")
-    assert csv_file is not None
+    if csv_file is None:
+        raise ValueError("Missing path to CSV file")
 
     counter = 0
     try:

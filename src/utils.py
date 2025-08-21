@@ -88,6 +88,5 @@ def load_config(env_file: str = ".env") -> Config:
     allow = os.getenv("ALLOW_AUTO_HOSTKEY", "false").lower() == "true"
     if not all([host, user, lib_stg, ifs_dir]):
         raise ValueError("Missing required config keys")
-    assert host and user and lib_stg and ifs_dir
     cfg = Config(host, user, ssh_key, password, lib_stg, ifs_dir, jobq, outq, allow)
     return cfg
