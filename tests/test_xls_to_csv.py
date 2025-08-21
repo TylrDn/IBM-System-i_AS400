@@ -17,5 +17,7 @@ def test_xls_to_csv(tmp_path):
     csv_from_excel(str(xls), str(out))
     with out.open() as fh:
         rows = list(csv.reader(fh))
-    assert rows[0][0].strip() == "1001"  # nosec
-    assert rows[0][1] == "1234.56"  # nosec
+    if rows[0][0].strip() != "1001":  # nosec - test validation
+        raise AssertionError("Unexpected employee ID")
+    if rows[0][1] != "1234.56":  # nosec - test validation
+        raise AssertionError("Unexpected amount")
