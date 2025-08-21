@@ -73,6 +73,13 @@ A sample file is provided in [`examples/payroll_sample.csv`](examples/payroll_sa
 
 Coverage reports from `pytest --cov` are uploaded to [Codacy](https://www.codacy.com/) on every push and pull request.
 
+To run this locally and upload results, set your project token and invoke the `coverage` target:
+
+```bash
+export CODACY_PROJECT_TOKEN=267af9c0d6a74aa6b0f05c0d60b48264
+make coverage
+```
+
 
 ## PUB400 Quick Start
 This project can connect to any IBM i, including PUB400, via SFTP/SSH or FTPS. Configure the application using variables defined in `.env`.
