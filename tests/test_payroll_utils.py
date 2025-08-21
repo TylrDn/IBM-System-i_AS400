@@ -11,7 +11,8 @@ import payroll_utils  # noqa: E402
 
 def test_open_sheet_success(monkeypatch):
     class FakeBook:
-        def sheet_by_index(self, idx):
+        @staticmethod
+        def sheet_by_index(idx):
             return "sheet"
 
     monkeypatch.setattr(payroll_utils.xlrd, "open_workbook", lambda f: FakeBook())
@@ -45,7 +46,8 @@ def test_write_sheet_to_csv_success(tmp_path):
     class Sheet:
         nrows = 2
 
-        def row_values(self, row):
+        @staticmethod
+        def row_values(row):
             return [row, row + 1]
 
     csv_file = tmp_path / "out.csv"
@@ -58,7 +60,8 @@ def test_write_sheet_to_csv_oserror(monkeypatch, tmp_path, caplog):
     class Sheet:
         nrows = 1
 
-        def row_values(self, row):
+        @staticmethod
+        def row_values(row):
             return [1]
 
     def fake_open(*args, **kwargs):

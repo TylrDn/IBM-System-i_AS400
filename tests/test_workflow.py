@@ -37,7 +37,8 @@ def test_sync_scripts(tmp_path):
     puts = []
 
     class Client:
-        def sftp_put(self, local, remote):
+        @staticmethod
+        def sftp_put(local, remote):
             puts.append((local, remote))
 
     wf._sync_scripts(Client(), "/ifs")
@@ -48,7 +49,8 @@ def test_run_setup_and_submit_job():
     cmds = []
 
     class Client:
-        def ssh_run(self, cmd):
+        @staticmethod
+        def ssh_run(cmd):
             cmds.append(cmd)
 
     wf._run_setup(Client(), "/ifs", "LIB")
@@ -99,7 +101,8 @@ def test_find_status_file_timeout(monkeypatch):
 
 def test_fetch_result(tmp_path):
     class Client:
-        def sftp_get(self, remote, local):
+        @staticmethod
+        def sftp_get(remote, local):
             Path(local).write_text("data")
 
     wf._fetch_result(Client(), "/ifs", tmp_path / "file.csv", logging.getLogger(__name__))
@@ -108,7 +111,8 @@ def test_fetch_result(tmp_path):
 
 def test_fetch_result_warning(caplog, tmp_path):
     class Client:
-        def sftp_get(self, remote, local):
+        @staticmethod
+        def sftp_get(remote, local):
             raise RuntimeError("fail")
 
     with caplog.at_level(logging.WARNING):
@@ -137,7 +141,8 @@ def test_wait_for_marker_failure(monkeypatch, tmp_path):
     monkeypatch.setattr(wf, "_find_status_file", lambda c, d, e: "bad.status")
 
     class Client:
-        def sftp_get(self, remote, local):
+        @staticmethod
+        def sftp_get(remote, local):
             Path(local).write_text("FAILED cause")
 
     with pytest.raises(RuntimeError):
@@ -161,13 +166,16 @@ def test_run_workflow(monkeypatch, tmp_path):
         def __exit__(self, *exc):
             raise NotImplementedError()
 
-        def ensure_remote_dirs(self, dirs):
+        @staticmethod
+        def ensure_remote_dirs(dirs):
             actions.append(("dirs", dirs))
 
-        def sftp_put(self, local, remote):
+        @staticmethod
+        def sftp_put(local, remote):
             actions.append(("put", local, remote))
 
-        def ssh_run(self, cmd):
+        @staticmethod
+        def ssh_run(cmd):
             actions.append(("ssh", cmd))
 
     monkeypatch.setattr(wf, "IBMiClient", lambda cfg, dry_run=False: Client())
@@ -222,7 +230,8 @@ def test_teardown(monkeypatch):
         def __exit__(self, *exc):
             raise NotImplementedError()
 
-        def ssh_run(self, cmd):
+        @staticmethod
+        def ssh_run(cmd):
             cmds.append(cmd)
 
     monkeypatch.setattr(wf, "IBMiClient", lambda cfg, dry_run=False: Client())
