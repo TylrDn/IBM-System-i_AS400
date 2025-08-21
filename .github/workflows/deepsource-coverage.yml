@@ -1,0 +1,54 @@
+name: DeepSource Coverage
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=. --cov-report=xml:coverage.xml
+
+      - name: Ensure coverage file size < 20MB
+        run: |
+          [ $(stat -c%s coverage.xml) -le 20000000 ]
+
+      - name: Install DeepSource CLI
+        run: curl https://deepsource.io/cli | sh
+
+      - name: Report to DeepSource
+        env:
+          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+        run: |
+          ./bin/deepsource report --analyzer python --coverage-report coverage.xml
+          ./bin/deepsource upload
+
+      # Optional: Use OIDC authentication instead of DSN
+      # - name: Authenticate with DeepSource via OIDC
+      #   uses: deepsourcelabs/oidc-auth@v1
+      # - name: Report to DeepSource (OIDC)
+      #   env:
+      #     DEEPSOURCE_ACCESS_TOKEN: ${{ steps.auth.outputs.token }}
+      #   run: |
+      #     ./bin/deepsource report --analyzer python --coverage-report coverage.xml
+      #     ./bin/deepsource upload
