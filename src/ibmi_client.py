@@ -8,6 +8,7 @@ import paramiko
 from .utils import timed
 
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
+_UNSAFE_SEP = re.compile(r"[;&|]")
 
 
 class IBMiClient:
@@ -33,9 +34,10 @@ class IBMiClient:
             self.log.info("DRY-RUN connect to %s", self.config.host)
             return
         self.client = paramiko.SSHClient()
-        if self.config.allow_auto_hostkey:
-            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.client.load_system_host_keys()
+        if self.config.allow_auto_hostkey:
+            # Warn rather than automatically trusting unknown hosts
+            self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
         kwargs = {"hostname": self.config.host, "username": self.config.user}
         if self.config.ssh_key:
             kwargs["key_filename"] = self.config.ssh_key
@@ -57,6 +59,8 @@ class IBMiClient:
             return "", "", 0
         if not self.client:
             raise RuntimeError("SSH client not connected")
+        if _UNSAFE_SEP.search(cmd):
+            raise ValueError("Unsafe shell command")
         stdin, stdout, stderr = self.client.exec_command(cmd, timeout=timeout)
         out = stdout.read().decode("utf-8", "ignore")
         err = stderr.read().decode("utf-8", "ignore")
