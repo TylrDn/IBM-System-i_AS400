@@ -1,9 +1,8 @@
--- Validate, transform and merge into shadow tables. Replace LIB_STG_PLACEHOLDER with the target schema.
-SET SCHEMA LIB_STG_PLACEHOLDER;
+-- Schema is provided at runtime via RUNSQLSTM SETVAR
+SET SCHEMA &LIB_STG;
 
--- Reset staging tables
-TRUNCATE TABLE RAC_STG_VALID IMMEDIATE;
-TRUNCATE TABLE RAC_STG_REJECTS IMMEDIATE;
+TRUNCATE TABLE RAC_STG_VALID;
+TRUNCATE TABLE RAC_STG_REJECTS;
 
 -- Simple parsing example: assume CSV format 'id,amount'
 INSERT INTO RAC_STG_VALID (ID, AMOUNT)

@@ -1,2 +1,2 @@
--- Drop staging schema. Replace LIB_STG_PLACEHOLDER with the target schema.
-DROP SCHEMA LIB_STG_PLACEHOLDER CASCADE;
+-- Library is provided at runtime via RUNSQLSTM SETVAR
+DROP SCHEMA &LIB_STG CASCADE;
