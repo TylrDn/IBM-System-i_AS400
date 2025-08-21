@@ -1,2 +1,2 @@
--- Drop staging schema. Uses ${LIB_STG} variable.
-DROP SCHEMA ${LIB_STG} CASCADE;
+-- Drop staging schema. Replace LIB_STG_PLACEHOLDER with the target schema.
+DROP SCHEMA LIB_STG_PLACEHOLDER CASCADE;

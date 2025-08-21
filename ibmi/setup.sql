@@ -1,7 +1,7 @@
--- Setup staging schema and tables. Uses ${LIB_STG} variable.
-CREATE SCHEMA IF NOT EXISTS ${LIB_STG};
+-- Setup staging schema and tables. Replace LIB_STG_PLACEHOLDER with the target schema.
+CREATE SCHEMA IF NOT EXISTS LIB_STG_PLACEHOLDER;
 
-SET SCHEMA ${LIB_STG};
+SET SCHEMA LIB_STG_PLACEHOLDER;
 
 CREATE TABLE IF NOT EXISTS RAC_STG_IN (
     RAW_LINE VARCHAR(512)

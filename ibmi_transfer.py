@@ -17,6 +17,7 @@ from typing import Optional
 import paramiko
 
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
+_SAFE_HOST = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
 class TransferError(RuntimeError):
@@ -36,10 +37,13 @@ def upload_csv_via_sftp(
 
     if not _SAFE_PATH.match(remote_dir):
         raise ValueError("Unsafe remote directory")
+    if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
+        raise ValueError("Unsafe host or user")
     for attempt in range(1, retries + 1):
         try:
             client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.RejectPolicy())
             client.connect(host, username=user, password=password)
             sftp = client.open_sftp()
             path = Path(local_path)
@@ -55,21 +59,26 @@ def upload_csv_via_sftp(
 def call_program_via_ssh(
     host: str,
     user: str,
-    cmd: str,
+    cmd: str | list[str],
     key_path: Optional[str] = None,
-    *,
-    raw: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run *cmd* on *host* via ``ssh`` and return the completed process."""
+
+    if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
+        raise ValueError("Unsafe host or user")
 
     ssh_cmd = ["ssh"]
     if key_path:
         ssh_cmd.extend(["-i", key_path])
     ssh_cmd.append(f"{user}@{host}")
-    if raw:
-        ssh_cmd.append(cmd)
+    if isinstance(cmd, str):
+        args = shlex.split(cmd)
     else:
-        ssh_cmd.extend(shlex.split(cmd))
+        args = list(cmd)
+    for arg in args:
+        if not _SAFE_PATH.match(arg):
+            raise ValueError(f"Unsafe command argument: {arg}")
+    ssh_cmd.extend(args)
 
     try:
         return subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)

@@ -63,7 +63,7 @@ def run_workflow(
             for script in ("setup.sql", "apply.sql", "process.clp", "teardown.sql"):
                 local_script = Path("ibmi") / script
                 text = local_script.read_text()
-                text = text.replace("${LIB_STG}", lib_stg)
+                text = text.replace("LIB_STG_PLACEHOLDER", lib_stg)
                 with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
                     tmp.write(text)
                     tmp_path = Path(tmp.name)

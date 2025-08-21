@@ -17,5 +17,5 @@ def test_xls_to_csv(tmp_path):
     csv_from_excel(str(xls), str(out))
     with out.open() as fh:
         rows = list(csv.reader(fh))
-    assert rows[0][0].strip() == "1001"
-    assert rows[0][1] == "1234.56"
+    assert rows[0][0].strip() == "1001"  # nosec
+    assert rows[0][1] == "1234.56"  # nosec

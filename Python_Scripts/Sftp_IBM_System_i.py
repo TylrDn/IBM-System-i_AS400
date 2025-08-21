@@ -17,16 +17,16 @@ def main() -> None:
         raise RuntimeError("Missing USER or PASSWORD environment variables")
 
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    sftp = None
     try:
         client.connect(host, username=user, password=password)
         sftp = client.open_sftp()
         print("SFTP connection established to", host)
     finally:
-        try:
+        if sftp is not None:
             sftp.close()
-        except Exception:
-            pass
         client.close()
 
 

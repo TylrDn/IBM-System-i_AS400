@@ -1,5 +1,5 @@
--- Validate, transform and merge into shadow tables. Uses ${LIB_STG} variable.
-SET SCHEMA ${LIB_STG};
+-- Validate, transform and merge into shadow tables. Replace LIB_STG_PLACEHOLDER with the target schema.
+SET SCHEMA LIB_STG_PLACEHOLDER;
 
 -- Reset staging tables
 DELETE FROM RAC_STG_VALID;
