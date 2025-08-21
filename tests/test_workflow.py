@@ -153,13 +153,13 @@ def test_run_workflow(monkeypatch, tmp_path):
 
     class Client:
         def __init__(self, *a, **k):
-            pass
+            raise NotImplementedError()
 
         def __enter__(self):
             return self
 
         def __exit__(self, *exc):
-            pass
+            raise NotImplementedError()
 
         def ensure_remote_dirs(self, dirs):
             actions.append(("dirs", dirs))
@@ -186,22 +186,22 @@ def test_run_workflow_sync(monkeypatch, tmp_path):
 
     class Client:
         def __init__(self, *a, **k):
-            pass
+            raise NotImplementedError()
 
         def __enter__(self):
             return self
 
         def __exit__(self, *exc):
-            pass
+            raise NotImplementedError()
 
         def ensure_remote_dirs(self, dirs):
-            pass
+            raise NotImplementedError()
 
         def sftp_put(self, local, remote):
-            pass
+            raise NotImplementedError()
 
         def ssh_run(self, cmd):
-            pass
+            raise NotImplementedError()
 
     monkeypatch.setattr(wf, "IBMiClient", lambda cfg, dry_run=False: Client())
     cfg = types.SimpleNamespace(ifs_dir="/ifs", lib_stg="L", outq="O", jobq="J")
@@ -214,13 +214,13 @@ def test_teardown(monkeypatch):
 
     class Client:
         def __init__(self, *a, **k):
-            pass
+            raise NotImplementedError()
 
         def __enter__(self):
             return self
 
         def __exit__(self, *exc):
-            pass
+            raise NotImplementedError()
 
         def ssh_run(self, cmd):
             cmds.append(cmd)

@@ -139,7 +139,7 @@ def test_call_program_via_ssh_nonzero_exit(monkeypatch):
             raise NotImplementedError()
 
         def connect(self, host, username, key_filename=None):
-            pass
+            raise NotImplementedError()
 
         def exec_command(self, command):
             f = FakeFile()
