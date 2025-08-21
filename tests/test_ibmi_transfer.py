@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest import mock
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -59,7 +58,8 @@ def test_call_program_via_ssh(monkeypatch):
         def __init__(self):
             self.channel = type("C", (), {"recv_exit_status": staticmethod(lambda: 0)})()
 
-        def read(self):
+        @staticmethod
+        def read():
             return b""
 
     class FakeClient:
@@ -69,10 +69,10 @@ def test_call_program_via_ssh(monkeypatch):
             FakeClient.last = self
 
         def load_system_host_keys(self):
-            pass
+            raise NotImplementedError()
 
         def set_missing_host_key_policy(self, policy):
-            pass
+            raise NotImplementedError()
 
         def connect(self, host, username, key_filename=None):
             self.host = host
@@ -85,7 +85,7 @@ def test_call_program_via_ssh(monkeypatch):
             return f, f, FakeFile()
 
         def close(self):
-            pass
+            raise NotImplementedError()
 
     monkeypatch.setattr(
         ibmi_transfer,
