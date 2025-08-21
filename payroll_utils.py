@@ -1,6 +1,6 @@
 """Utility functions for payroll data processing."""
 
-import csv
+import defusedcsv as csv
 import logging
 import os
 from typing import Optional
