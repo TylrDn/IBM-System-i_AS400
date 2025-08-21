@@ -17,7 +17,7 @@ def test_upload_csv_via_sftp(monkeypatch, tmp_path):
             self.put_calls.append((local, remote))
 
         def close(self):
-            pass
+            raise NotImplementedError()
 
     class FakeSSHClient:
         last = None
@@ -26,10 +26,10 @@ def test_upload_csv_via_sftp(monkeypatch, tmp_path):
             FakeSSHClient.last = self
 
         def set_missing_host_key_policy(self, policy):
-            pass
+            raise NotImplementedError()
 
         def load_system_host_keys(self):
-            pass
+            raise NotImplementedError()
 
         def connect(self, host, username, password):
             self.host = host
@@ -41,7 +41,7 @@ def test_upload_csv_via_sftp(monkeypatch, tmp_path):
             return self.sftp
 
         def close(self):
-            pass
+            raise NotImplementedError()
 
     monkeypatch.setattr(ibmi_transfer, "paramiko", SimpleNamespace(SSHClient=FakeSSHClient, RejectPolicy=object))
     local = tmp_path / "sample.csv"
