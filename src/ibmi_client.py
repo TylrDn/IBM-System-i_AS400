@@ -11,6 +11,7 @@ from .utils import timed
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
 # Block common shell separators including newlines to avoid command injection
 _UNSAFE_SEP = re.compile(r"[;&|\r\n]")
+_SFTP_CLIENT_NOT_CONNECTED = "SFTP client not connected"
 
 
 class IBMiClient:
@@ -80,7 +81,7 @@ class IBMiClient:
         if self.dry_run:
             return
         if not self.sftp:
-            raise RuntimeError("SFTP client not connected")
+            raise RuntimeError(_SFTP_CLIENT_NOT_CONNECTED)
         self.sftp.put(str(local), remote)
 
     @timed
@@ -89,8 +90,23 @@ class IBMiClient:
         if self.dry_run:
             return
         if not self.sftp:
-            raise RuntimeError("SFTP client not connected")
+            raise RuntimeError(_SFTP_CLIENT_NOT_CONNECTED)
         self.sftp.get(remote, str(local))
+
+    def _ensure_dir(self, path: str) -> None:
+        if not self.sftp:
+            raise RuntimeError(_SFTP_CLIENT_NOT_CONNECTED)
+        if not _SAFE_PATH.match(path):
+            raise ValueError(f"Unsafe remote path: {path}")
+        self.log.info("Ensure remote dir %s", path)
+        parts = path.strip("/").split("/")
+        cur = "/" if path.startswith("/") else ""
+        for part in parts:
+            cur = f"{cur}/{part}" if cur and not cur.endswith("/") else f"{cur}{part}"
+            try:
+                self.sftp.stat(cur)
+            except IOError:
+                self.sftp.mkdir(cur)
 
     @timed
     def ensure_remote_dirs(self, paths: Iterable[str]) -> None:
@@ -98,18 +114,5 @@ class IBMiClient:
             for p in paths:
                 self.log.info("DRY-RUN mkdir -p %s", p)
             return
-        if not self.sftp:
-            raise RuntimeError("SFTP client not connected")
         for p in paths:
-            if not _SAFE_PATH.match(p):
-                raise ValueError(f"Unsafe remote path: {p}")
-            self.log.info("Ensure remote dir %s", p)
-            # Recursively create each path component to mimic `mkdir -p`
-            parts = p.strip("/").split("/")
-            cur = "/" if p.startswith("/") else ""
-            for part in parts:
-                cur = f"{cur}/{part}" if cur and not cur.endswith("/") else f"{cur}{part}"
-                try:
-                    self.sftp.stat(cur)
-                except IOError:
-                    self.sftp.mkdir(cur)
+            self._ensure_dir(p)
