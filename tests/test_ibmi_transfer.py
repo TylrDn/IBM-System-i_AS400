@@ -141,7 +141,8 @@ def test_call_program_via_ssh_nonzero_exit(monkeypatch):
         def connect(self, host, username, key_filename=None):
             raise NotImplementedError()
 
-        def exec_command(self, command):
+        @staticmethod
+        def exec_command(command):
             f = FakeFile()
             return f, f, FakeFile()
 
