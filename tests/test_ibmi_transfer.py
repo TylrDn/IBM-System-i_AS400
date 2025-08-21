@@ -1,90 +1,51 @@
-from pathlib import Path
 import sys
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-import ibmi_transfer
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+import ibmi_transfer  # noqa: E402
 
 
-def test_upload_csv_via_ftp(monkeypatch, tmp_path):
-    class FakeFTP:
+def test_upload_csv_via_sftp(monkeypatch, tmp_path):
+    class FakeSFTP:
+        def __init__(self):
+            self.put_calls = []
+
+        def put(self, local, remote):
+            self.put_calls.append((local, remote))
+
+        def close(self):
+            pass
+
+    class FakeSSHClient:
         last = None
 
         def __init__(self, *args, **kwargs):
-            FakeFTP.last = self
+            FakeSSHClient.last = self
 
-        def connect(self, host, port):
+        def set_missing_host_key_policy(self, policy):
+            pass
+
+        def connect(self, host, username, password):
             self.host = host
-
-        def login(self, user, password):
-            self.user = user
+            self.username = username
             self.password = password
 
-        def prot_p(self):
-            self.tls = True
-
-        def cwd(self, path):
-            self.path = path
-
-        def storbinary(self, cmd, handle):
-            self.cmd = cmd
-            self.data = handle.read()
-            return "226 OK"
-
-        def quit(self):
-            self.quit_called = True
+        def open_sftp(self):
+            self.sftp = FakeSFTP()
+            return self.sftp
 
         def close(self):
             pass
 
-    monkeypatch.setattr(
-        ibmi_transfer, "ftplib", SimpleNamespace(FTP=FakeFTP, FTP_TLS=FakeFTP)
-    )
+    monkeypatch.setattr(ibmi_transfer, "paramiko", SimpleNamespace(SSHClient=FakeSSHClient, AutoAddPolicy=object))
     local = tmp_path / "sample.csv"
     local.write_text("hello")
-    resp = ibmi_transfer.upload_csv_via_ftp("h", "u", "p", local, "/tmp")
-    ftp = FakeFTP.last
-    assert resp == "226 OK"
-    assert ftp.path == "/tmp"
-    assert ftp.cmd == f"STOR {local.name}"
-    assert ftp.data == b"hello"
-
-
-def test_call_program_via_ftp_rcmd(monkeypatch):
-    class FakeFTP:
-        last = None
-
-        def __init__(self, *args, **kwargs):
-            FakeFTP.last = self
-
-        def connect(self, host, port):
-            pass
-
-        def login(self, user, password):
-            pass
-
-        def prot_p(self):
-            self.tls = True
-
-        def sendcmd(self, cmd):
-            self.cmd = cmd
-            return "250 OK"
-
-        def quit(self):
-            pass
-
-        def close(self):
-            pass
-
-    monkeypatch.setattr(
-        ibmi_transfer, "ftplib", SimpleNamespace(FTP=FakeFTP, FTP_TLS=FakeFTP)
-    )
-    resp = ibmi_transfer.call_program_via_ftp_rcmd("h", "u", "p", "LIB", "PGM", ["'A'"])
-    ftp = FakeFTP.last
-    assert resp == "250 OK"
-    assert ftp.cmd == "QUOTE RCMD CALL PGM(LIB/PGM) PARM('A')"
+    ibmi_transfer.upload_csv_via_sftp("h", "u", "p", local, "/tmp")
+    client = FakeSSHClient.last
+    assert client.sftp.put_calls == [(str(local), f"/tmp/{local.name}")]
 
 
 def test_call_program_via_ssh(monkeypatch):

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-import sys
 import subprocess
+import sys
 import time
 from pathlib import Path
-from tkinter import Tk, RIGHT, LEFT, HORIZONTAL, StringVar
-from tkinter.ttk import *
+from tkinter import HORIZONTAL, LEFT, RIGHT, StringVar, Tk
+from tkinter.ttk import Button, Label, Progressbar
 
 from PIL import Image, ImageTk
 

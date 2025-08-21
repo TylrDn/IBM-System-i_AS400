@@ -1,10 +1,13 @@
 import logging
+import re
 from pathlib import Path
 from typing import Iterable
 
 import paramiko
 
 from .utils import timed
+
+_SAFE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
 
 
 class IBMiClient:
@@ -52,7 +55,8 @@ class IBMiClient:
         self.log.info("SSH: %s", cmd)
         if self.dry_run:
             return "", "", 0
-        assert self.client
+        if not self.client:
+            raise RuntimeError("SSH client not connected")
         stdin, stdout, stderr = self.client.exec_command(cmd, timeout=timeout)
         out = stdout.read().decode("utf-8", "ignore")
         err = stderr.read().decode("utf-8", "ignore")
@@ -66,7 +70,8 @@ class IBMiClient:
         self.log.info("PUT %s -> %s", local, remote)
         if self.dry_run:
             return
-        assert self.sftp
+        if not self.sftp:
+            raise RuntimeError("SFTP client not connected")
         self.sftp.put(str(local), remote)
 
     @timed
@@ -74,11 +79,14 @@ class IBMiClient:
         self.log.info("GET %s -> %s", remote, local)
         if self.dry_run:
             return
-        assert self.sftp
+        if not self.sftp:
+            raise RuntimeError("SFTP client not connected")
         self.sftp.get(remote, str(local))
 
     @timed
     def ensure_remote_dirs(self, paths: Iterable[str]) -> None:
         for p in paths:
+            if not _SAFE_PATH.match(p):
+                raise ValueError(f"Unsafe remote path: {p}")
             cmd = f"test -d {p} || mkdir -p {p}"
             self.ssh_run(cmd)

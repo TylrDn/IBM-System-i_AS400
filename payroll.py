@@ -11,7 +11,6 @@ from tkinter.ttk import Progressbar
 
 from PIL import Image, ImageTk
 
-
 parser = argparse.ArgumentParser(description="Payroll GUI wrapper")
 parser.add_argument("--dry-run", action="store_true", help="Validate without uploading")
 parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
