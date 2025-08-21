@@ -9,7 +9,8 @@ import paramiko
 from .utils import timed
 
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
-_UNSAFE_SEP = re.compile(r"[;&|]")
+# Block common shell separators including newlines to avoid command injection
+_UNSAFE_SEP = re.compile(r"[;&|\r\n]")
 
 
 class IBMiClient:
@@ -93,8 +94,22 @@ class IBMiClient:
 
     @timed
     def ensure_remote_dirs(self, paths: Iterable[str]) -> None:
+        if self.dry_run:
+            for p in paths:
+                self.log.info("DRY-RUN mkdir -p %s", p)
+            return
+        if not self.sftp:
+            raise RuntimeError("SFTP client not connected")
         for p in paths:
             if not _SAFE_PATH.match(p):
                 raise ValueError(f"Unsafe remote path: {p}")
-            cmd = f"test -d {p} || mkdir -p {p}"
-            self.ssh_run(cmd)
+            self.log.info("Ensure remote dir %s", p)
+            # Recursively create each path component to mimic `mkdir -p`
+            parts = p.strip("/").split("/")
+            cur = "/" if p.startswith("/") else ""
+            for part in parts:
+                cur = f"{cur}/{part}" if cur and not cur.endswith("/") else f"{cur}{part}"
+                try:
+                    self.sftp.stat(cur)
+                except IOError:
+                    self.sftp.mkdir(cur)
