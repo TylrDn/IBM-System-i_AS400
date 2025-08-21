@@ -40,7 +40,7 @@ def import_gui(monkeypatch, module_name):
             raise NotImplementedError()
 
     monkeypatch.setattr(sys, "argv", [module_name])
-    monkeypatch.setattr("tkinter.Tk", lambda: DummyWindow())
+    monkeypatch.setattr("tkinter.Tk", DummyWindow)
     monkeypatch.setattr("tkinter.Label", DummyWidget)
     monkeypatch.setattr("tkinter.Button", DummyWidget)
     monkeypatch.setattr("tkinter.ttk.Label", DummyWidget)
