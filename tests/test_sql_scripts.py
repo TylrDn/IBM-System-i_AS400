@@ -1,3 +1,7 @@
+"""Validate properties of the SQL scripts."""
+
+# ruff: noqa: S101
+
 import sys
 from pathlib import Path
 

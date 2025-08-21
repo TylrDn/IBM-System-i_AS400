@@ -60,6 +60,29 @@ def _submit_job(client: IBMiClient, lib_stg: str, ifs_dir: str, outq: str, jobq:
     client.ssh_run(submit_cmd)
 
 
+def _find_status_file(client: IBMiClient, marker_dir: str, end: float) -> str:
+    """Poll *marker_dir* until a ``.status`` file appears or timeout."""
+    while time.time() < end:
+        entries = client.sftp.listdir(marker_dir)
+        status = next((name for name in entries if name.endswith(".status")), None)
+        if status:
+            return status
+        time.sleep(5)
+    raise TimeoutError("Timed out waiting for marker file")
+
+
+def _fetch_result(client: IBMiClient, ifs_dir: str, csv_path: Path, log: logging.Logger) -> None:
+    """Retrieve result CSV from remote system, logging any failure."""
+    out_dir = Path("outputs")
+    out_dir.mkdir(exist_ok=True)
+    result_remote = f"{ifs_dir}/out/{csv_path.stem}_result.csv"
+    result_local = out_dir / f"{csv_path.stem}_result.csv"
+    try:
+        client.sftp_get(result_remote, result_local)
+    except Exception as exc:  # pragma: no cover - remote optional
+        log.warning("Could not fetch result CSV: %s", exc)
+
+
 def _wait_for_marker(
     client: IBMiClient,
     ifs_dir: str,
@@ -70,30 +93,14 @@ def _wait_for_marker(
     timeout: int,
 ) -> None:
     marker_dir = f"{ifs_dir}/run"
-    end = time.time() + timeout
-    status_file = None
-    while time.time() < end:
-        entries = client.sftp.listdir(marker_dir)
-        status_file = next((name for name in entries if name.endswith(".status")), None)
-        if status_file:
-            break
-        time.sleep(5)
-    if not status_file:
-        raise TimeoutError("Timed out waiting for marker file")
+    status_file = _find_status_file(client, marker_dir, time.time() + timeout)
     local_marker = Path("outputs") / status_file
     client.sftp_get(f"{marker_dir}/{status_file}", local_marker)
     result = local_marker.read_text().strip()
     if "FAILED" in result:
         raise RuntimeError(f"Remote job failed: {result}")
     if fetch_outputs:
-        out_dir = Path("outputs")
-        out_dir.mkdir(exist_ok=True)
-        result_remote = f"{ifs_dir}/out/{csv_path.stem}_result.csv"
-        result_local = out_dir / f"{csv_path.stem}_result.csv"
-        try:
-            client.sftp_get(result_remote, result_local)
-        except Exception as exc:  # pragma: no cover - remote optional
-            log.warning("Could not fetch result CSV: %s", exc)
+        _fetch_result(client, ifs_dir, csv_path, log)
 
 
 @timed

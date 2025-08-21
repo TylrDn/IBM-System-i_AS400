@@ -1,11 +1,15 @@
+"""Tests for IBM i client helper."""
+
+# ruff: noqa: S101
+
 import sys
 import types
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from src.ibmi_client import IBMiClient  # noqa: E402
 import src.ibmi_client as ibmi_client_mod  # noqa: E402
+from src.ibmi_client import IBMiClient  # noqa: E402
 
 
 def test_ssh_run_rejects_newlines() -> None:
