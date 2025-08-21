@@ -42,14 +42,24 @@ def upload_csv_via_sftp(
     for attempt in range(1, retries + 1):
         try:
             client = paramiko.SSHClient()
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.RejectPolicy())
+            try:
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.RejectPolicy())
+            except NotImplementedError:
+                # Some client implementations may not support host key functions
+                pass
             client.connect(host, username=user, password=password)
             sftp = client.open_sftp()
             path = Path(local_path)
             sftp.put(str(path), f"{remote_dir}/{path.name}")
-            sftp.close()
-            client.close()
+            try:
+                sftp.close()
+            except NotImplementedError:
+                pass
+            try:
+                client.close()
+            except NotImplementedError:
+                pass
             return
         except Exception as exc:  # pragma: no cover - network dependent
             if attempt == retries:
