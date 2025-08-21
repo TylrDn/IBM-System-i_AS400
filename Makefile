@@ -2,12 +2,12 @@ VENV?=.venv
 PYTHON=$(VENV)/bin/python
 PIP=$(VENV)/bin/pip
 
-.PHONY: dev legacy-run test lint package install run sync setup clean-staging
+.PHONY: dev legacy-run test lint package install run sync setup clean-staging coverage
 
 dev:
 	python3 -m venv $(VENV)
 	$(PIP) install -r requirements.txt
-	$(PIP) install pytest flake8 ruff pyinstaller
+	$(PIP) install pytest flake8 ruff pyinstaller pytest-cov coverage
 
 legacy-run: dev
 	$(PYTHON) payroll.py
@@ -36,3 +36,7 @@ lint: dev
 
 package: dev
 	$(VENV)/bin/pyinstaller pyinstaller.spec
+
+coverage: dev
+	$(PYTHON) -m pytest --cov=. --cov-report=xml:coverage.xml
+	bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage.xml
