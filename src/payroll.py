@@ -8,10 +8,7 @@ import payroll_b
 
 
 def button_confirm():
-    """
-    runs the interface
-
-    """
+    """runs the interface"""
     try:
         task = 10
         x = 0
@@ -39,10 +36,7 @@ def button_confirm():
 
 
 def button_cancel():
-    """
-    Cancel process and exit...
-
-    """
+    """Cancel process and exit..."""
     WindowFrame.quit()
 
 
