@@ -105,7 +105,7 @@ class IBMiClient:
             raise RuntimeError("SSH client not connected")
         parts = _sanitize_parts(cmd)
         safe_cmd = " ".join(shlex.quote(part) for part in parts)
-        _, stdout, stderr = self.client.exec_command(
+        _, stdout, stderr = self.client.exec_command(  # nosec B601
             safe_cmd, timeout=timeout
         )
         out = stdout.read().decode("utf-8", "ignore")

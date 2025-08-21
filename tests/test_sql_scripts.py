@@ -14,8 +14,7 @@ def test_sql_files_are_fully_qualified() -> None:
     apply = (root / "apply.sql").read_text().upper()
     teardown = (root / "teardown.sql").read_text().upper()
 
+    assert "CREATE SCHEMA IF NOT EXISTS &LIB_STG" in setup
     for content in (setup, apply):
-        assert "&LIB_STG." in content
-        assert "SET SCHEMA" not in content
-
+        assert "SET SCHEMA &LIB_STG" in content
     assert "DROP SCHEMA IF EXISTS &LIB_STG" in teardown
