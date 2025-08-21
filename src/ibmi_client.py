@@ -15,15 +15,17 @@ _SFTP_CLIENT_NOT_CONNECTED = "SFTP client not connected"
 
 
 def _sanitize_parts(cmd: str | Iterable[str]) -> list[str]:
-    """Split *cmd* and ensure it contains no unsafe shell separators."""
+    """Split *cmd* and ensure it contains no unsafe shell characters."""
     if isinstance(cmd, str):
         if _UNSAFE_SEP.search(cmd):
             raise ValueError("Unsafe shell command")
         parts = shlex.split(cmd)
     else:
         parts = list(cmd)
+    if not parts:
+        raise ValueError("Empty command")
     for part in parts:
-        if _UNSAFE_SEP.search(part):
+        if _UNSAFE_SEP.search(part) or not _SAFE_PATH.match(part):
             raise ValueError("Unsafe shell command")
     return parts
 
@@ -103,7 +105,7 @@ class IBMiClient:
             raise RuntimeError("SSH client not connected")
         parts = _sanitize_parts(cmd)
         safe_cmd = " ".join(shlex.quote(part) for part in parts)
-        _, stdout, stderr = self.client.exec_command(  # noqa: S601
+        _, stdout, stderr = self.client.exec_command(
             safe_cmd, timeout=timeout
         )
         out = stdout.read().decode("utf-8", "ignore")
