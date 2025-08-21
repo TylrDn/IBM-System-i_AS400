@@ -1,6 +1,5 @@
 import logging
 import re
-import tempfile
 import time
 from pathlib import Path
 
@@ -38,16 +37,11 @@ def _remote_dirs(ifs_dir: str) -> list[str]:
     ]
 
 
-def _sync_scripts(client: IBMiClient, ifs_dir: str, lib_stg: str) -> None:
+def _sync_scripts(client: IBMiClient, ifs_dir: str) -> None:
     for script in ("setup.sql", "apply.sql", "process.clp", "teardown.sql"):
         local_script = Path("ibmi") / script
-        text = local_script.read_text().replace("LIB_STG_PLACEHOLDER", lib_stg)
-        with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
-            tmp.write(text)
-            tmp_path = Path(tmp.name)
         remote_script = f"{ifs_dir}/scripts/{script}"
-        client.sftp_put(tmp_path, remote_script)
-        tmp_path.unlink()
+        client.sftp_put(local_script, remote_script)
 
 
 def _run_setup(client: IBMiClient, ifs_dir: str, lib_stg: str) -> None:
@@ -132,7 +126,7 @@ def run_workflow(
         client.ensure_remote_dirs(remote_dirs)
 
         if sync:
-            _sync_scripts(client, ifs_dir, lib_stg)
+            _sync_scripts(client, ifs_dir)
 
         client.sftp_put(csv_path, remote_csv)
         _run_setup(client, ifs_dir, lib_stg)
