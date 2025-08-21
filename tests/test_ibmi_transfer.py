@@ -58,7 +58,8 @@ def test_call_program_via_ssh(monkeypatch):
         def __init__(self):
             self.channel = type("C", (), {"recv_exit_status": staticmethod(lambda: 0)})()
 
-        def read(self):
+        @staticmethod
+        def read():
             return b""
 
     class FakeClient:
