@@ -63,8 +63,9 @@ class IBMiClient:
         if _UNSAFE_SEP.search(cmd):
             raise ValueError("Unsafe shell command")
         # Sanitize the command by quoting each argument to avoid shell injection
-        safe_cmd = shlex.join(shlex.split(cmd))
-        stdin, stdout, stderr = self.client.exec_command(safe_cmd, timeout=timeout)
+        parts = shlex.split(cmd)
+        safe_cmd = " ".join(shlex.quote(part) for part in parts)
+        _, stdout, stderr = self.client.exec_command(safe_cmd, timeout=timeout)
         out = stdout.read().decode("utf-8", "ignore")
         err = stderr.read().decode("utf-8", "ignore")
         rc = stdout.channel.recv_exit_status()
