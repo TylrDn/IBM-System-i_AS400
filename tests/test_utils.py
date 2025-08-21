@@ -27,6 +27,7 @@ def test_timed_decorator(monkeypatch, caplog):
     counter = itertools.count()
 
     def _mock_time():
+        """Return sequential timestamps from ``counter`` for testing."""
         try:
             return next(counter)
         except StopIteration:

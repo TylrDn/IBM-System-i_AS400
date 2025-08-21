@@ -70,6 +70,7 @@ def test_find_status_file(monkeypatch):
     times = iter([0, 1, 2])
 
     def _mock_time():
+        """Return sequential timestamps from ``times`` for testing."""
         try:
             return next(times)
         except StopIteration:
@@ -85,6 +86,7 @@ def test_find_status_file_timeout(monkeypatch):
     times = iter([0, 1, 2, 3, 20])
 
     def _mock_time():
+        """Return sequential timestamps from ``times`` for testing."""
         try:
             return next(times)
         except StopIteration:
