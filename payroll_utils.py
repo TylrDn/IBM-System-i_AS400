@@ -40,14 +40,17 @@ def csv_from_excel(
         sheet = workbook.sheet_by_index(0)
     except FileNotFoundError:
         logger.error(
-            Fore.RED
-            + f"Opening the {xls_file} file failed, please make sure that the file exists in the folder."
+            "%sOpening the %s file failed, please make sure that the file exists in the folder.",
+            Fore.RED,
+            xls_file,
         )
         raise
     except xlrd.biffh.XLRDError as exc:
         logger.error(
-            Fore.RED
-            + f"Failed to open {xls_file}: {exc}. The file may be corrupt or in an unsupported format."
+            "%sFailed to open %s: %s. The file may be corrupt or in an unsupported format.",
+            Fore.RED,
+            xls_file,
+            exc,
         )
         raise
 
@@ -57,9 +60,14 @@ def csv_from_excel(
             for row in range(sheet.nrows):
                 writer.writerow(sheet.row_values(row))
                 counter += 1
-                logger.info(f"{sheet.row_values(row)}")
+                logger.info("%s", sheet.row_values(row))
     except OSError as exc:
-        logger.error(Fore.RED + f"Failed to write to CSV file {csv_file}: {exc}")
+        logger.error(
+            "%sFailed to write to CSV file %s: %s",
+            Fore.RED,
+            csv_file,
+            exc,
+        )
         raise
 
-    logger.info(Fore.GREEN + f"Total records in the csv file ------> {counter}")
+    logger.info("%sTotal records in the csv file ------> %s", Fore.GREEN, counter)

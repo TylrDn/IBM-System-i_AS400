@@ -54,8 +54,11 @@ def xlsx_to_csv(in_xlsx: Path, out_csv: Path) -> Path:
 
 def sha256_file(path: Path) -> str:
     """Return SHA-256 digest of a file."""
+    safe_path = path.resolve()
+    if not safe_path.is_file():
+        raise ValueError(f"Not a file: {path}")
     h = hashlib.sha256()
-    with open(path, "rb") as f:
+    with safe_path.open("rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
