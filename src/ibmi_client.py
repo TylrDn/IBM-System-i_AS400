@@ -56,21 +56,26 @@ class IBMiClient:
             self.client.close()
 
     @timed
-    def ssh_run(self, cmd: str, timeout: int = 60) -> tuple[str, str, int]:
+    def ssh_run(
+        self, cmd: str | Iterable[str], timeout: int = 60
+    ) -> tuple[str, str, int]:
         self.log.info("SSH: %s", cmd)
         if self.dry_run:
             return "", "", 0
         if not self.client:
             raise RuntimeError("SSH client not connected")
-        if _UNSAFE_SEP.search(cmd):
-            raise ValueError("Unsafe shell command")
+        if isinstance(cmd, str):
+            if _UNSAFE_SEP.search(cmd):
+                raise ValueError("Unsafe shell command")
+            parts = shlex.split(cmd)
+        else:
+            parts = list(cmd)
+            for part in parts:
+                if _UNSAFE_SEP.search(part):
+                    raise ValueError("Unsafe shell command")
         # Sanitize the command by quoting each argument to avoid shell injection
-        parts = shlex.split(cmd)
         safe_cmd = " ".join(shlex.quote(part) for part in parts)
-        # Bandit B601: safe_cmd is fully shell-quoted above
-        _, stdout, stderr = self.client.exec_command(
-            safe_cmd, timeout=timeout
-        )  # nosec B601
+        _, stdout, stderr = self.client.exec_command(safe_cmd, timeout=timeout)
         out = stdout.read().decode("utf-8", "ignore")
         err = stderr.read().decode("utf-8", "ignore")
         rc = stdout.channel.recv_exit_status()
