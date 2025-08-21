@@ -1,5 +1,6 @@
 import logging
 import re
+import shlex
 from pathlib import Path
 from typing import Iterable
 
@@ -61,7 +62,10 @@ class IBMiClient:
             raise RuntimeError("SSH client not connected")
         if _UNSAFE_SEP.search(cmd):
             raise ValueError("Unsafe shell command")
-        stdin, stdout, stderr = self.client.exec_command(cmd, timeout=timeout)
+        # Sanitize the command by quoting each argument to avoid shell injection
+        parts = shlex.split(cmd)
+        safe_cmd = " ".join(shlex.quote(part) for part in parts)
+        stdin, stdout, stderr = self.client.exec_command(safe_cmd, timeout=timeout)
         out = stdout.read().decode("utf-8", "ignore")
         err = stderr.read().decode("utf-8", "ignore")
         rc = stdout.channel.recv_exit_status()
