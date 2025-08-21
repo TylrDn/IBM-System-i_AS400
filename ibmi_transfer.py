@@ -17,6 +17,24 @@ import paramiko
 
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9_./-]+$")
 _SAFE_HOST = re.compile(r"^[A-Za-z0-9_.-]+$")
+# Block common shell separators including newlines to avoid command injection
+_UNSAFE_SEP = re.compile(r"[;&|\r\n]")
+
+
+def _sanitize_parts(cmd: str | list[str]) -> list[str]:
+    """Split *cmd* and ensure it contains no unsafe shell characters."""
+    if isinstance(cmd, str):
+        if _UNSAFE_SEP.search(cmd):
+            raise ValueError("Unsafe command")
+        parts = shlex.split(cmd)
+    else:
+        parts = list(cmd)
+    if not parts:
+        raise ValueError("Empty command")
+    for part in parts:
+        if _UNSAFE_SEP.search(part) or not _SAFE_PATH.match(part):
+            raise ValueError(f"Unsafe command argument: {part}")
+    return parts
 
 
 class TransferError(RuntimeError):
@@ -87,16 +105,13 @@ def call_program_via_ssh(
     if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
         raise ValueError("Unsafe host or user")
 
-    args = shlex.split(cmd) if isinstance(cmd, str) else list(cmd)
-    for arg in args:
-        if not _SAFE_PATH.match(arg):
-            raise ValueError(f"Unsafe command argument: {arg}")
+    args = _sanitize_parts(cmd)
     command = " ".join(shlex.quote(arg) for arg in args)
 
     client = _init_client()
     try:
         client.connect(host, username=user, key_filename=key_path)
-        _, stdout, stderr = client.exec_command(command)  # noqa: S601
+        _, stdout, stderr = client.exec_command(command)
         exit_status = stdout.channel.recv_exit_status()
         _ = stdout.read().decode()
         err = stderr.read().decode()

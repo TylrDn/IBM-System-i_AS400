@@ -25,6 +25,50 @@ def test_ssh_run_rejects_newlines() -> None:
         raise AssertionError("newline should be rejected")
 
 
+def test_ssh_run_executes_safe_command() -> None:
+    client = IBMiClient(config=types.SimpleNamespace(), dry_run=False)
+
+    class DummyFile:
+        channel = types.SimpleNamespace(recv_exit_status=lambda: 0)
+
+        @staticmethod
+        def read():
+            return b""
+
+    class DummyClient:
+        def exec_command(self, command, timeout):
+            self.command = command
+            return DummyFile(), DummyFile(), DummyFile()
+
+    dummy = DummyClient()
+    client.client = dummy  # type: ignore[assignment]
+    out, err, rc = client.ssh_run("rm -rf /")
+    assert dummy.command == "rm -rf /"
+    assert out == err == "" and rc == 0
+
+
+def test_ssh_run_rejects_injection() -> None:
+    client = IBMiClient(config=types.SimpleNamespace(), dry_run=False)
+    client.client = object()  # type: ignore[assignment]
+    try:
+        client.ssh_run("echo $(whoami)")
+    except ValueError as exc:  # noqa: PT011 - expect exception
+        assert "Unsafe shell command" in str(exc)
+    else:  # pragma: no cover - safety net
+        raise AssertionError("injection should be rejected")
+
+
+def test_ssh_run_rejects_empty() -> None:
+    client = IBMiClient(config=types.SimpleNamespace(), dry_run=False)
+    client.client = object()  # type: ignore[assignment]
+    try:
+        client.ssh_run("")
+    except ValueError as exc:  # noqa: PT011 - expect exception
+        assert "Empty command" in str(exc)
+    else:  # pragma: no cover - safety net
+        raise AssertionError("empty command should be rejected")
+
+
 def test_ensure_remote_dirs_creates_missing() -> None:
     """ensure_remote_dirs should create missing directories recursively."""
 

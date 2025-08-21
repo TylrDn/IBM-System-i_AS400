@@ -2,6 +2,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import ibmi_transfer  # noqa: E402
@@ -92,9 +94,64 @@ def test_call_program_via_ssh(monkeypatch):
         "paramiko",
         SimpleNamespace(SSHClient=FakeClient, RejectPolicy=object),
     )
-    ibmi_transfer.call_program_via_ssh("h", "u", "cmd", key_path="k")
+    ibmi_transfer.call_program_via_ssh("h", "u", "rm -rf /", key_path="k")
     client = FakeClient.last
-    if client.command != "cmd":  # nosec - used for test validation
+    if client.command != "rm -rf /":  # nosec - used for test validation
         raise AssertionError(f"Unexpected command: {client.command}")
     if client.key_filename != "k":  # nosec - used for test validation
         raise AssertionError(f"Unexpected key: {client.key_filename}")
+
+
+def test_call_program_via_ssh_rejects_injection(monkeypatch):
+    monkeypatch.setattr(
+        ibmi_transfer,
+        "paramiko",
+        SimpleNamespace(SSHClient=lambda: None, RejectPolicy=object),
+    )
+    with pytest.raises(ValueError):
+        ibmi_transfer.call_program_via_ssh("h", "u", "echo $(whoami)")
+
+
+def test_call_program_via_ssh_rejects_empty(monkeypatch):
+    monkeypatch.setattr(
+        ibmi_transfer,
+        "paramiko",
+        SimpleNamespace(SSHClient=lambda: None, RejectPolicy=object),
+    )
+    with pytest.raises(ValueError):
+        ibmi_transfer.call_program_via_ssh("h", "u", "")
+
+
+def test_call_program_via_ssh_nonzero_exit(monkeypatch):
+    class FakeFile:
+        def __init__(self):
+            self.channel = type("C", (), {"recv_exit_status": staticmethod(lambda: 1)})()
+
+        @staticmethod
+        def read():
+            return b""
+
+    class FakeClient:
+        def load_system_host_keys(self):
+            raise NotImplementedError()
+
+        def set_missing_host_key_policy(self, policy):
+            raise NotImplementedError()
+
+        def connect(self, host, username, key_filename=None):
+            pass
+
+        def exec_command(self, command):
+            f = FakeFile()
+            return f, f, FakeFile()
+
+        def close(self):
+            raise NotImplementedError()
+
+    monkeypatch.setattr(
+        ibmi_transfer,
+        "paramiko",
+        SimpleNamespace(SSHClient=FakeClient, RejectPolicy=object),
+    )
+    with pytest.raises(RuntimeError):
+        ibmi_transfer.call_program_via_ssh("h", "u", "ls")
