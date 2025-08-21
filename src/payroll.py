@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import subprocess
 import sys
 import time
@@ -55,7 +54,6 @@ def button_cancel():
 
 WindowFrame = Tk()
 WindowFrame.geometry('500x500')
-# WindowFrame.eval('tk::PlaceWindow . center')
 WindowFrame.title("Interfaz Ajustes Salariales de Nomina SPI")
 
 lbl = Label(WindowFrame, text='¿Desea Confirmar la Ejecucion del Proceso?')
@@ -82,6 +80,5 @@ but2 = Button(WindowFrame, text='    Cancel     ', command=button_cancel)
 but2.pack(side=RIGHT, padx=15, pady=20)
 but2.pack()
 
-# WindowFrame.config(bg='#ce9dd4')
 WindowFrame.resizable(0, 0)
 WindowFrame.mainloop()
