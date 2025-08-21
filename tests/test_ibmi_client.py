@@ -60,7 +60,7 @@ def test_connect_uses_reject_policy(monkeypatch) -> None:
             self.policy = None
 
         def load_system_host_keys(self) -> None:
-            pass
+            raise NotImplementedError()
 
         def set_missing_host_key_policy(
             self, policy
@@ -68,13 +68,13 @@ def test_connect_uses_reject_policy(monkeypatch) -> None:
             self.policy = policy
 
         def connect(self, **kwargs) -> None:  # noqa: ANN003 - external API
-            pass
+            raise NotImplementedError()
 
         def open_sftp(self):  # noqa: ANN001 - external API
             return None
 
         def close(self) -> None:
-            pass
+            raise NotImplementedError()
 
     fake_paramiko = types.SimpleNamespace(
         SSHClient=FakeClient,
@@ -94,7 +94,7 @@ def test_connect_allows_auto_hostkey(monkeypatch) -> None:
             self.policy = None
 
         def load_system_host_keys(self) -> None:
-            pass
+            raise NotImplementedError()
 
         def set_missing_host_key_policy(
             self, policy
@@ -102,13 +102,13 @@ def test_connect_allows_auto_hostkey(monkeypatch) -> None:
             self.policy = policy
 
         def connect(self, **kwargs) -> None:  # noqa: ANN003 - external API
-            pass
+            raise NotImplementedError()
 
         def open_sftp(self):  # noqa: ANN001 - external API
             return None
 
         def close(self) -> None:
-            pass
+            raise NotImplementedError()
 
     fake_paramiko = types.SimpleNamespace(
         SSHClient=FakeClient,
