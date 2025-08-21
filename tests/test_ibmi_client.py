@@ -70,7 +70,8 @@ def test_connect_uses_reject_policy(monkeypatch) -> None:
         def connect(self, **kwargs) -> None:  # noqa: ANN003 - external API
             raise NotImplementedError()
 
-        def open_sftp(self):  # noqa: ANN001 - external API
+        @staticmethod
+        def open_sftp():  # noqa: ANN001 - external API
             return None
 
         def close(self) -> None:
@@ -104,7 +105,8 @@ def test_connect_allows_auto_hostkey(monkeypatch) -> None:
         def connect(self, **kwargs) -> None:  # noqa: ANN003 - external API
             raise NotImplementedError()
 
-        def open_sftp(self):  # noqa: ANN001 - external API
+        @staticmethod
+        def open_sftp():  # noqa: ANN001 - external API
             return None
 
         def close(self) -> None:
