@@ -37,3 +37,14 @@ def test_ensure_remote_dirs_creates_missing() -> None:
     client.ensure_remote_dirs(["/a/b/c"])
     assert client.sftp.created == ["/a", "/a/b", "/a/b/c"]
 
+
+def test_ensure_remote_dirs_rejects_unsafe() -> None:
+    client = IBMiClient(config=types.SimpleNamespace(), dry_run=False)
+    client.sftp = object()  # type: ignore[assignment]
+    try:
+        client.ensure_remote_dirs(["bad;rm"])
+    except ValueError as exc:  # noqa: PT011 - expect exception
+        assert "Unsafe remote path" in str(exc)
+    else:  # pragma: no cover - safety net
+        assert False, "unsafe path should be rejected"
+

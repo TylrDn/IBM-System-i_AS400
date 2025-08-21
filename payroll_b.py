@@ -63,13 +63,17 @@ def main() -> int:
         return 0
     logger.info("Uploading %s to %s", cfg.csv_file, cfg.remote_dir)
     upload_csv_via_sftp(cfg.host, cfg.user, cfg.password, cfg.csv_file, cfg.remote_dir)
-    if not re.fullmatch(r"[A-Za-z0-9_]+", cfg.lib):
+    if not re.fullmatch(r"\w+", cfg.lib, re.ASCII):
         raise ValueError("Invalid library name")
-    if not re.fullmatch(r"[A-Za-z0-9_]+", cfg.program):
+    if not re.fullmatch(r"\w+", cfg.program, re.ASCII):
         raise ValueError("Invalid program name")
     cmd = f"system 'CALL PGM({cfg.lib}/{cfg.program})'"
     logger.info("Running remote program via SSH")
-    call_program_via_ssh(cfg.host, cfg.user, cmd, os.environ.get("SSH_KEY"))
+    try:
+        call_program_via_ssh(cfg.host, cfg.user, cmd, os.environ.get("SSH_KEY"))
+    except RuntimeError as exc:
+        logger.error("Remote program failed: %s", exc)
+        return 1
     return 0
 
 
