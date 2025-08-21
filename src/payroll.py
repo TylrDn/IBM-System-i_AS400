@@ -1,11 +1,10 @@
-import subprocess
-import sys
 import time
 from pathlib import Path
 from tkinter import HORIZONTAL, LEFT, RIGHT, StringVar, Tk
 from tkinter.ttk import Button, Label, Progressbar
 
 from PIL import Image, ImageTk
+import payroll_b
 
 
 def button_confirm():
@@ -27,16 +26,11 @@ def button_confirm():
         payroll_b_path = (Path(__file__).resolve().parent.parent / "payroll_b.py").resolve()
         if not payroll_b_path.is_file():
             raise FileNotFoundError(f"Missing payroll_b script: {payroll_b_path}")
-        completed_process = subprocess.run(
-            [sys.executable, str(payroll_b_path)],
-            check=True,
-            shell=False,
-            capture_output=True,
-            text=True,
-        )
-        print(completed_process)
-    except subprocess.CalledProcessError as exc:
-        print(f"An error has occurred in payroll_b: {exc.stderr}")
+        rc = payroll_b.main()
+        if rc != 0:
+            raise RuntimeError(f"payroll_b exited with status {rc}")
+    except Exception as exc:
+        print(f"An error has occurred in payroll_b: {exc}")
         raise
     else:
         print("Successful execution of payroll_b")

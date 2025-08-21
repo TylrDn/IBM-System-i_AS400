@@ -55,17 +55,46 @@ def test_upload_csv_via_sftp(monkeypatch, tmp_path):
 
 
 def test_call_program_via_ssh(monkeypatch):
-    called = {}
+    class FakeFile:
+        def __init__(self):
+            self.channel = type("C", (), {"recv_exit_status": staticmethod(lambda: 0)})()
 
-    def fake_run(cmd, capture_output, text, **kwargs):
-        called["cmd"] = cmd
-        called.update(kwargs)
-        return mock.Mock(returncode=0, stdout="", stderr="")
+        def read(self):
+            return b""
 
-    monkeypatch.setattr(ibmi_transfer.subprocess, "run", fake_run)
+    class FakeClient:
+        last = None
+
+        def __init__(self):
+            FakeClient.last = self
+
+        def load_system_host_keys(self):
+            pass
+
+        def set_missing_host_key_policy(self, policy):
+            pass
+
+        def connect(self, host, username, key_filename=None):
+            self.host = host
+            self.username = username
+            self.key_filename = key_filename
+
+        def exec_command(self, command):
+            self.command = command
+            f = FakeFile()
+            return f, f, FakeFile()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(
+        ibmi_transfer,
+        "paramiko",
+        SimpleNamespace(SSHClient=FakeClient, RejectPolicy=object),
+    )
     ibmi_transfer.call_program_via_ssh("h", "u", "cmd", key_path="k")
-    expected_cmd = ["ssh", "-i", "k", "u@h", "cmd"]
-    if called["cmd"] != expected_cmd:  # nosec - used for test validation
-        raise AssertionError(f"Unexpected command: {called['cmd']}")
-    if called.get("check") is not True:  # nosec - used for test validation
-        raise AssertionError("check flag was not set")
+    client = FakeClient.last
+    if client.command != "cmd":  # nosec - used for test validation
+        raise AssertionError(f"Unexpected command: {client.command}")
+    if client.key_filename != "k":  # nosec - used for test validation
+        raise AssertionError(f"Unexpected key: {client.key_filename}")

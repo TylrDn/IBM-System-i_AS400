@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import argparse
 import logging
-import subprocess
-import sys
 import time
 from pathlib import Path
 from tkinter import HORIZONTAL, LEFT, RIGHT, Button, Label, StringVar, Tk
 from tkinter.ttk import Progressbar
 
 from PIL import Image, ImageTk
+import payroll_b
 
 parser = argparse.ArgumentParser(description="Payroll GUI wrapper")
 parser.add_argument("--dry-run", action="store_true", help="Validate without uploading")
@@ -35,17 +34,11 @@ def button_confirm() -> None:
         script_path = Path(__file__).with_name("payroll_b.py").resolve()
         if not script_path.is_file():
             raise FileNotFoundError(f"Missing payroll_b script: {script_path}")
-        cmd = [sys.executable, str(script_path)]
-        if args.dry_run:
-            cmd.append("--dry-run")
-        if args.verbose:
-            cmd.append("--verbose")
-        completed_process = subprocess.run(
-            cmd, check=True, capture_output=True, text=True, shell=False
-        )
-        log.debug(completed_process.stdout)
-    except subprocess.CalledProcessError as exc:
-        log.error("An error has occurred in payroll_b: %s", exc.stderr)
+        rc = payroll_b.main()
+        if rc != 0:
+            raise RuntimeError(f"payroll_b exited with status {rc}")
+    except Exception as exc:
+        log.error("An error has occurred in payroll_b: %s", exc)
         raise
     else:
         log.info("Successful execution of payroll_b")
