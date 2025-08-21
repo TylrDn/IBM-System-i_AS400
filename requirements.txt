@@ -7,3 +7,6 @@ pandas~=2.2
 black>=24.3.0
 ruff==0.1.5
 mypy==1.5.1
+
+pytest
+pytest-cov
