@@ -6,6 +6,7 @@ import argparse
 import logging
 import os
 import re
+import tempfile
 from dataclasses import dataclass
 
 from colorama import init
@@ -32,7 +33,7 @@ def load_config() -> Config:
         host=os.environ.get("HOST", ""),
         user=os.environ.get("USER", ""),
         password=os.environ.get("PASSWORD", ""),
-        remote_dir=os.environ.get("REMOTE_DIR", "/tmp"),
+        remote_dir=os.environ.get("REMOTE_DIR") or tempfile.gettempdir(),
         lib=os.environ.get("LIB", ""),
         program=os.environ.get("PROGRAM", ""),
         csv_file=os.environ.get("CSV_FILE", "examples/payroll_sample.csv"),
