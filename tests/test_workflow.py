@@ -68,7 +68,14 @@ def test_find_status_file(monkeypatch):
             return [] if self.calls < 2 else ["done.status"]
 
     times = iter([0, 1, 2])
-    monkeypatch.setattr(wf.time, "time", lambda: next(times))
+
+    def _mock_time():
+        try:
+            return next(times)
+        except StopIteration:
+            return 999
+
+    monkeypatch.setattr(wf.time, "time", _mock_time)
     status = wf._find_status_file(Client(), "dir", 5)
     assert status == "done.status"
 
@@ -76,7 +83,14 @@ def test_find_status_file(monkeypatch):
 def test_find_status_file_timeout(monkeypatch):
     client = types.SimpleNamespace(sftp=types.SimpleNamespace(listdir=lambda p: []))
     times = iter([0, 1, 2, 3, 20])
-    monkeypatch.setattr(wf.time, "time", lambda: next(times))
+
+    def _mock_time():
+        try:
+            return next(times)
+        except StopIteration:
+            return 999
+
+    monkeypatch.setattr(wf.time, "time", _mock_time)
     with pytest.raises(TimeoutError):
         wf._find_status_file(client, "dir", 10)
 
