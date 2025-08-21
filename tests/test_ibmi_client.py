@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.ibmi_client import IBMiClient  # noqa: E402
+import src.ibmi_client as ibmi_client_mod  # noqa: E402
 
 
 def test_ssh_run_rejects_newlines() -> None:
@@ -51,3 +52,71 @@ def test_ensure_remote_dirs_rejects_unsafe() -> None:
         assert "Unsafe remote path" in str(exc)
     else:  # pragma: no cover - safety net
         raise AssertionError("unsafe path should be rejected")
+
+
+def test_connect_uses_reject_policy(monkeypatch) -> None:
+    class FakeClient:
+        def __init__(self) -> None:
+            self.policy = None
+
+        def load_system_host_keys(self) -> None:
+            pass
+
+        def set_missing_host_key_policy(
+            self, policy
+        ) -> None:  # noqa: ANN001 - external API
+            self.policy = policy
+
+        def connect(self, **kwargs) -> None:  # noqa: ANN003 - external API
+            pass
+
+        def open_sftp(self):  # noqa: ANN001 - external API
+            return None
+
+        def close(self) -> None:
+            pass
+
+    fake_paramiko = types.SimpleNamespace(
+        SSHClient=FakeClient,
+        AutoAddPolicy=lambda: "auto",
+        RejectPolicy=lambda: "reject",
+    )
+    monkeypatch.setattr(ibmi_client_mod, "paramiko", fake_paramiko)
+    cfg = types.SimpleNamespace(host="h", user="u", allow_auto_hostkey=False)
+    client = IBMiClient(cfg)
+    client.connect()
+    assert client.client.policy == "reject"
+
+
+def test_connect_allows_auto_hostkey(monkeypatch) -> None:
+    class FakeClient:
+        def __init__(self) -> None:
+            self.policy = None
+
+        def load_system_host_keys(self) -> None:
+            pass
+
+        def set_missing_host_key_policy(
+            self, policy
+        ) -> None:  # noqa: ANN001 - external API
+            self.policy = policy
+
+        def connect(self, **kwargs) -> None:  # noqa: ANN003 - external API
+            pass
+
+        def open_sftp(self):  # noqa: ANN001 - external API
+            return None
+
+        def close(self) -> None:
+            pass
+
+    fake_paramiko = types.SimpleNamespace(
+        SSHClient=FakeClient,
+        AutoAddPolicy=lambda: "auto",
+        RejectPolicy=lambda: "reject",
+    )
+    monkeypatch.setattr(ibmi_client_mod, "paramiko", fake_paramiko)
+    cfg = types.SimpleNamespace(host="h", user="u", allow_auto_hostkey=True)
+    client = IBMiClient(cfg)
+    client.connect()
+    assert client.client.policy == "auto"
