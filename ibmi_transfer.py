@@ -72,7 +72,6 @@ def upload_csv_via_sftp(
     retries: int = 3,
 ) -> None:
     """Upload *local_path* to *remote_dir* on the IBM i server using SFTP."""
-
     if not _SAFE_PATH.match(remote_dir):
         raise ValueError("Unsafe remote directory")
     if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
@@ -102,7 +101,6 @@ def call_program_via_ssh(
     key_path: Optional[str] = None,
 ) -> None:
     """Run *cmd* on *host* via ``ssh`` using ``paramiko``."""
-
     if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
         raise ValueError("Unsafe host or user")
 
