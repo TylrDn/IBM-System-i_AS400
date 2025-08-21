@@ -67,7 +67,10 @@ class IBMiClient:
         # Sanitize the command by quoting each argument to avoid shell injection
         parts = shlex.split(cmd)
         safe_cmd = " ".join(shlex.quote(part) for part in parts)
-        _, stdout, stderr = self.client.exec_command(safe_cmd, timeout=timeout)
+        # Bandit B601: safe_cmd is fully shell-quoted above
+        _, stdout, stderr = self.client.exec_command(
+            safe_cmd, timeout=timeout
+        )  # nosec B601
         out = stdout.read().decode("utf-8", "ignore")
         err = stderr.read().decode("utf-8", "ignore")
         rc = stdout.channel.recv_exit_status()

@@ -1,10 +1,10 @@
 import sys
-from pathlib import Path
 import types
+from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from src.ibmi_client import IBMiClient
+from src.ibmi_client import IBMiClient  # noqa: E402
 
 
 def test_ssh_run_rejects_newlines() -> None:
@@ -17,19 +17,23 @@ def test_ssh_run_rejects_newlines() -> None:
     except ValueError as exc:  # noqa: PT011 - expect exception
         assert "Unsafe shell command" in str(exc)
     else:  # pragma: no cover - safety net
-        assert False, "newline should be rejected"
+        raise AssertionError("newline should be rejected")
 
 
 def test_ensure_remote_dirs_creates_missing() -> None:
     """ensure_remote_dirs should create missing directories recursively."""
+
     class DummySFTP:
         def __init__(self) -> None:
             self.created: list[str] = []
 
-        def stat(self, path: str):  # noqa: ANN001 - param signature fixed by API
+        @staticmethod
+        def stat(path: str) -> None:  # noqa: ANN001 - param signature fixed by API
             raise IOError()
 
-        def mkdir(self, path: str):  # noqa: ANN001 - param signature fixed by API
+        def mkdir(
+            self, path: str
+        ) -> None:  # noqa: ANN001 - param signature fixed by API
             self.created.append(path)
 
     client = IBMiClient(config=types.SimpleNamespace(), dry_run=False)
@@ -46,5 +50,4 @@ def test_ensure_remote_dirs_rejects_unsafe() -> None:
     except ValueError as exc:  # noqa: PT011 - expect exception
         assert "Unsafe remote path" in str(exc)
     else:  # pragma: no cover - safety net
-        assert False, "unsafe path should be rejected"
-
+        raise AssertionError("unsafe path should be rejected")
