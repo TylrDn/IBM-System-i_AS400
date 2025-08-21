@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 import re
 import shlex
-import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -71,16 +70,12 @@ def call_program_via_ssh(
     user: str,
     cmd: str | list[str],
     key_path: Optional[str] = None,
-) -> subprocess.CompletedProcess[str]:
-    """Run *cmd* on *host* via ``ssh`` and return the completed process."""
+) -> None:
+    """Run *cmd* on *host* via ``ssh`` using ``paramiko``."""
 
     if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
         raise ValueError("Unsafe host or user")
 
-    ssh_cmd = ["ssh"]
-    if key_path:
-        ssh_cmd.extend(["-i", key_path])
-    ssh_cmd.append(f"{user}@{host}")
     if isinstance(cmd, str):
         args = shlex.split(cmd)
     else:
@@ -88,12 +83,28 @@ def call_program_via_ssh(
     for arg in args:
         if not _SAFE_PATH.match(arg):
             raise ValueError(f"Unsafe command argument: {arg}")
-    ssh_cmd.extend(args)
+    command = " ".join(shlex.quote(arg) for arg in args)
 
+    client = paramiko.SSHClient()
     try:
-        return subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
-    except subprocess.CalledProcessError as exc:
+        try:
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.RejectPolicy())
+        except NotImplementedError:
+            pass
+        client.connect(host, username=user, key_filename=key_path)
+        stdin, stdout, stderr = client.exec_command(command)
+        exit_status = stdout.channel.recv_exit_status()
+        _ = stdout.read().decode()
+        err = stderr.read().decode()
+    finally:
+        try:
+            client.close()
+        except NotImplementedError:
+            pass
+    if exit_status != 0:
         raise RuntimeError(
-            f"SSH command failed with exit code {exc.returncode}: {exc.stderr}"
-        ) from exc
+            f"SSH command failed with exit code {exit_status}: {err}"
+        )
+    return None
 
