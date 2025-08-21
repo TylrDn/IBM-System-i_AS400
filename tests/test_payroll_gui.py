@@ -6,38 +6,38 @@ import pytest
 def import_gui(monkeypatch, module_name):
     class DummyWidget:
         def __init__(self, *a, **k):
-            pass
+            raise NotImplementedError()
 
         def pack(self, *a, **k):
-            pass
+            raise NotImplementedError()
 
         def config(self, *a, **k):
-             pass
+             raise NotImplementedError()
 
         def configure(self, *a, **k):
-             pass
+             raise NotImplementedError()
 
     class DummyWindow(DummyWidget):
         def __init__(self):
             self.tk = object()
 
         def geometry(self, *a):
-            pass
+            raise NotImplementedError()
 
         def title(self, *a):
-            pass
+            raise NotImplementedError()
 
         def update_idletasks(self):
-            pass
+            raise NotImplementedError()
 
         def quit(self):
-            pass
+            raise NotImplementedError()
 
         def resizable(self, *a):
-            pass
+            raise NotImplementedError()
 
         def mainloop(self):
-            pass
+            raise NotImplementedError()
 
     monkeypatch.setattr(sys, "argv", [module_name])
     monkeypatch.setattr("tkinter.Tk", lambda: DummyWindow())
