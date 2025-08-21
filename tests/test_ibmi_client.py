@@ -1,0 +1,39 @@
+import sys
+from pathlib import Path
+import types
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from src.ibmi_client import IBMiClient
+
+
+def test_ssh_run_rejects_newlines() -> None:
+    """ssh_run should block commands containing newlines."""
+    client = IBMiClient(config=types.SimpleNamespace(), dry_run=False)
+    # Provide a dummy client to satisfy connection check
+    client.client = object()  # type: ignore[assignment]
+    try:
+        client.ssh_run("echo hi\nwhoami")
+    except ValueError as exc:  # noqa: PT011 - expect exception
+        assert "Unsafe shell command" in str(exc)
+    else:  # pragma: no cover - safety net
+        assert False, "newline should be rejected"
+
+
+def test_ensure_remote_dirs_creates_missing() -> None:
+    """ensure_remote_dirs should create missing directories recursively."""
+    class DummySFTP:
+        def __init__(self) -> None:
+            self.created: list[str] = []
+
+        def stat(self, path: str):  # noqa: ANN001 - param signature fixed by API
+            raise IOError()
+
+        def mkdir(self, path: str):  # noqa: ANN001 - param signature fixed by API
+            self.created.append(path)
+
+    client = IBMiClient(config=types.SimpleNamespace(), dry_run=False)
+    client.sftp = DummySFTP()
+    client.ensure_remote_dirs(["/a/b/c"])
+    assert client.sftp.created == ["/a", "/a/b", "/a/b/c"]
+
