@@ -66,6 +66,8 @@ def sha256_file(path: Path) -> str:
 
 @dataclass
 class Config:
+    """Runtime configuration for IBM i interactions."""
+
     host: str
     user: str
     ssh_key: str | None

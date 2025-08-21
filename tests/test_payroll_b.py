@@ -1,3 +1,7 @@
+"""Tests for payroll_b module."""
+
+# ruff: noqa: S101,S106,S108
+
 import argparse
 from functools import partial
 

@@ -23,6 +23,26 @@ class TransferError(RuntimeError):
     """Raised when a network command returns a non-success status."""
 
 
+def _init_client() -> paramiko.SSHClient:
+    """Return an SSH client with host-key policies set."""
+    client = paramiko.SSHClient()
+    try:
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    except NotImplementedError:
+        # Some client implementations may not support host key functions
+        pass
+    return client
+
+
+def _safe_close(obj) -> None:
+    """Attempt to close *obj*, ignoring missing implementations."""
+    try:
+        obj.close()
+    except Exception:
+        pass
+
+
 def upload_csv_via_sftp(
     host: str,
     user: str,
@@ -39,30 +59,21 @@ def upload_csv_via_sftp(
     if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
         raise ValueError("Unsafe host or user")
     for attempt in range(1, retries + 1):
+        client = _init_client()
+        sftp = None
         try:
-            client = paramiko.SSHClient()
-            try:
-                client.load_system_host_keys()
-                client.set_missing_host_key_policy(paramiko.RejectPolicy())
-            except NotImplementedError:
-                # Some client implementations may not support host key functions
-                pass
             client.connect(host, username=user, password=password)
             sftp = client.open_sftp()
             path = Path(local_path)
             sftp.put(str(path), f"{remote_dir}/{path.name}")
-            try:
-                sftp.close()
-            except NotImplementedError:
-                pass
-            try:
-                client.close()
-            except NotImplementedError:
-                pass
             return
         except Exception as exc:  # pragma: no cover - network dependent
             if attempt == retries:
                 raise TransferError(f"SFTP upload failed: {exc}") from exc
+        finally:
+            if sftp:
+                _safe_close(sftp)
+            _safe_close(client)
 
 
 def call_program_via_ssh(
@@ -76,32 +87,21 @@ def call_program_via_ssh(
     if not _SAFE_HOST.match(host) or not _SAFE_HOST.match(user):
         raise ValueError("Unsafe host or user")
 
-    if isinstance(cmd, str):
-        args = shlex.split(cmd)
-    else:
-        args = list(cmd)
+    args = shlex.split(cmd) if isinstance(cmd, str) else list(cmd)
     for arg in args:
         if not _SAFE_PATH.match(arg):
             raise ValueError(f"Unsafe command argument: {arg}")
     command = " ".join(shlex.quote(arg) for arg in args)
 
-    client = paramiko.SSHClient()
+    client = _init_client()
     try:
-        try:
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.RejectPolicy())
-        except NotImplementedError:
-            pass
         client.connect(host, username=user, key_filename=key_path)
-        stdin, stdout, stderr = client.exec_command(command)
+        _, stdout, stderr = client.exec_command(command)  # noqa: S601
         exit_status = stdout.channel.recv_exit_status()
         _ = stdout.read().decode()
         err = stderr.read().decode()
     finally:
-        try:
-            client.close()
-        except NotImplementedError:
-            pass
+        _safe_close(client)
     if exit_status != 0:
         raise RuntimeError(
             f"SSH command failed with exit code {exit_status}: {err}"

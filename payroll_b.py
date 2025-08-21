@@ -18,6 +18,8 @@ from payroll_utils import csv_from_excel
 
 @dataclass
 class Config:
+    """Configuration for payroll upload."""
+
     host: str
     user: str
     password: str
@@ -28,6 +30,7 @@ class Config:
 
 
 def load_config() -> Config:
+    """Load configuration from environment variables."""
     load_dotenv()
     return Config(
         host=os.environ.get("HOST", ""),
@@ -41,6 +44,7 @@ def load_config() -> Config:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Upload payroll CSV to IBM i")
     parser.add_argument(
         "--dry-run", action="store_true", help="Validate without uploading"
@@ -50,6 +54,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Entrypoint for the payroll uploader CLI."""
     args = parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO, format="%(message)s"
