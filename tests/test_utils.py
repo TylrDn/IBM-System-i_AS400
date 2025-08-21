@@ -25,7 +25,14 @@ def test_timed_decorator(monkeypatch, caplog):
     import itertools
 
     counter = itertools.count()
-    monkeypatch.setattr(utils.time, "time", lambda: next(counter))
+
+    def _mock_time():
+        try:
+            return next(counter)
+        except StopIteration:
+            return 0
+
+    monkeypatch.setattr(utils.time, "time", _mock_time)
 
     @utils.timed
     def sample(x):
