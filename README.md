@@ -1,5 +1,7 @@
 # IBM i Payroll Upload Tool
 
+[![Codacy coverage](https://app.codacy.com/project/badge/Coverage/PROJECT_ID)](https://app.codacy.com/gh/TylrDn/IBM-System-i_AS400/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
+
 Convert an Excel payroll extract to CSV, upload it to the IBM i (formerly AS/400) Integrated File System (IFS), and invoke a program to apply salary adjustments. The tool uses SSH/SFTP by default but also supports FTPS.
 
 **Flow:** XLS → CSV → IFS upload → `CALL LIB/PROGRAM (PARMS)`
@@ -66,6 +68,10 @@ A sample file is provided in [`examples/payroll_sample.csv`](examples/payroll_sa
 - Sample data lives in [`examples/`](examples/).
 - See [CONTRIBUTING](CONTRIBUTING.md) for development guidelines.
 - Licensed under the [MIT License](LICENSE).
+
+## Test coverage via Codacy
+
+Coverage reports from `pytest --cov` are uploaded to [Codacy](https://www.codacy.com/) on every push and pull request.
 
 
 ## PUB400 Quick Start
