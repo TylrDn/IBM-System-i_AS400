@@ -37,15 +37,25 @@ class IBMiClient:
             self.log.info("DRY-RUN connect to %s", self.config.host)
             return
         self.client = paramiko.SSHClient()
-        self.client.load_system_host_keys()
-        if self.config.allow_auto_hostkey:
-            # Warn rather than automatically trusting unknown hosts
-            self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
+        try:
+            self.client.load_system_host_keys()
+            policy = (
+                paramiko.AutoAddPolicy()
+                if getattr(self.config, "allow_auto_hostkey", False)
+                else paramiko.RejectPolicy()
+            )
+            self.client.set_missing_host_key_policy(policy)
+        except NotImplementedError:
+            # Older paramiko versions on some platforms may not implement
+            # host key handling; continue without overriding the default
+            pass
         kwargs = {"hostname": self.config.host, "username": self.config.user}
-        if self.config.ssh_key:
-            kwargs["key_filename"] = self.config.ssh_key
-        elif self.config.password:
-            kwargs["password"] = self.config.password
+        key = getattr(self.config, "ssh_key", None)
+        pw = getattr(self.config, "password", None)
+        if key:
+            kwargs["key_filename"] = key
+        elif pw:
+            kwargs["password"] = pw
         self.client.connect(**kwargs)
         self.sftp = self.client.open_sftp()
 
